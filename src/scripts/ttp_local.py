@@ -432,8 +432,8 @@ def read_csv_to_rows(data_file):
         row_cnt += chunk.shape[0]
         print(data_file +' row_cnt=', row_cnt)
         # for test
-        if row_cnt >= 10000:
-            break
+        #if row_cnt >= 10000:
+        #    break
     return rows
 def row_to_dict(row, key_list):
     pt = {}
