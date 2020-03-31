@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-# python ttp_local.py --use-csv --file-path ~/Documents/puffer-201903 --start-date 20190301 --end-date 20190301
-import sys
+# python ttp_local.py --use-csv --file-path ~/Documents/puffer-201903 --start-date 20190301 --end-date 20190301 --save-model ./save_model/
 import json
 import argparse
 import yaml
 import torch
 import datetime
+import sys
 from os import path
 from datetime import datetime, timedelta
 import numpy as np
-from multiprocessing import Process
+from multiprocessing import Process, Array, Pool
 import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
@@ -39,6 +39,7 @@ VIDEO_ACKED_KEYS=['timestamp', 'session_id',
 'experiment_id', 'channel_name', 'chunk_presentation_timestamp']
 CLIENT_BUFFER_KEYS=['timestamp', 'session_id',	
 'experiment_id', 'channel_name', 'event', 'playback_buffer', 'cumulative_rebuffer']
+
 
 
 VIDEO_DURATION = 180180
@@ -806,6 +807,15 @@ def train_or_eval_model(i, args, raw_in_data, raw_out_data):
         # train a neural network with data
         train(i, args, model, input_data, output_data)
 
+def read_csv_proc(i, args, date_item):
+    print("io_proc ", i)
+    video_sent_file_name = args.file_path+'/'+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
+    video_acked_file_name = args.file_path+'/'+VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
+    #client_buffer_file_name = CLIENT_BUFFER_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
+    video_sent_rows =  read_csv_to_rows(video_sent_file_name)
+    video_acked_rows = read_csv_to_rows(video_acked_file_name)
+    return video_sent_rows,video_acked_rows
+    
 
 def main():
     parser = argparse.ArgumentParser()
@@ -838,23 +848,29 @@ def main():
     print('end date {0}'.format(args.end_date)) 
 
     start_dt = datetime.strptime(args.start_date,"%Y%m%d")
-    end_dt = datetime.strptime(args.start_date,"%Y%m%d")
+    end_dt = datetime.strptime(args.end_date,"%Y%m%d")
     # validate and process args
-    # check_args(args)
+    check_args(args)
     if args.use_csv:
         video_sent_rows = []
         video_acked_rows = []
         client_buffer_rows = []
-        for i in range((end_dt - start_dt).days+1):
-            date_item = start_dt + timedelta(days=i)
-            video_sent_file_name = args.file_path+'/'+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-            video_acked_file_name = args.file_path+'/'+VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-            #client_buffer_file_name = CLIENT_BUFFER_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-            video_sent_rows_single =  read_csv_to_rows(video_sent_file_name)
-            video_acked_rows_single = read_csv_to_rows(video_acked_file_name)
-            video_sent_rows.extend(video_sent_rows_single)
-            video_acked_rows.extend(video_acked_rows_single)
 
+        process_num = (end_dt - start_dt).days+1
+        pool = Pool(processes= process_num)
+        result = []
+        for i in range(process_num):
+            date_item = start_dt + timedelta(days=i)
+            result.append(pool.apply_async(read_csv_proc, args=(i, args, date_item, )))
+        pool.close()
+        pool.join()
+        print("join fin")
+        for res in result:
+            video_sent_rows.extend(res.get()[0])
+            video_acked_rows.extend(res.get()[1])
+            
+        print(len(video_sent_rows)," ", len(video_acked_rows))
+        # exit(0)
         print("row len = ", len(video_sent_rows))
         raw_data = process_raw_csv_data(video_sent_rows, video_acked_rows, None)
         # collect input and output data from raw data
