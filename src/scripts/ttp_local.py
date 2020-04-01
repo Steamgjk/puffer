@@ -818,7 +818,7 @@ def read_csv_proc(proc_id, args, date_item, sample_size):
     print("io_proc ", proc_id, " read rows FIN")
     raw_data = process_raw_csv_data(video_sent_rows, video_acked_rows, None)
     del video_sent_rows, video_acked_rows
-    gc.colllect()
+    gc.collect()
     # collect input and output data from raw data
     raw_in_out = prepare_input_output(raw_data)
     del raw_data
