@@ -813,6 +813,8 @@ def read_csv_proc(proc_id, args, date_item, sample_size):
     gc.colllect()
     # collect input and output data from raw data
     raw_in_out = prepare_input_output(raw_data)
+    del raw_data
+    gc.collect()
     if sample_size is not None:
         ret = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
         for i in range(Model.FUTURE_CHUNKS):
@@ -820,8 +822,9 @@ def read_csv_proc(proc_id, args, date_item, sample_size):
             for j in perm_indices:
                 ret[i]['in'].append(raw_in_out[i]['in'][j])
                 ret[i]['out'].append(raw_in_out[i]['out'][j])
+        del raw_in_out
+        gc.collect()
         raw_in_out = ret
-    print("io_proc ", proc_id, " ", len(raw_data)," ", len(raw_in_out))
     for raw_in_out_item in raw_in_out:
         print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
     #return raw_in_out, video_sent_rows, video_acked_rows
@@ -883,7 +886,7 @@ def main():
     check_args(args)
     if args.use_csv:
         day_num = (end_dt - start_dt).days+1
-        pool = Pool(processes= 5)
+        pool = Pool(processes= 7)
         result = []
         raw_in_out = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
         sample_data_sizes = [None for i in range(day_num)]
