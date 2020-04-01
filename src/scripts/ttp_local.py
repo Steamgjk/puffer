@@ -25,7 +25,7 @@ VIDEO_SENT_FILE_PREFIX = 'video_sent_'
 VIDEO_ACKED_FILE_PREFIX = 'video_acked_'
 CLIENT_BUFFER_FILE_PREFIX = 'client_buffer_'
 FILE_SUFFIX = 'T11.csv'
-FILE_CHUNK_SIZE = 10000
+FILE_CHUNK_SIZE = 100000
 VIDEO_SENT_KEYS=['timestamp', 'session_id',	
 'experiment_id', 'channel_name', 'chunk_presentation_timestamp', 'resolution',
 'chunk_size', 'ssim_index',	'cwnd', 'in_flight', 'min_rtt','rtt','delivery_rate']
@@ -808,6 +808,7 @@ def read_csv_proc(proc_id, args, date_item, sample_size):
     #client_buffer_file_name = CLIENT_BUFFER_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
     video_sent_rows =  read_csv_to_rows(video_sent_file_name)
     video_acked_rows = read_csv_to_rows(video_acked_file_name)
+    print("io_proc ", proc_id, " read rows FIN")
     raw_data = process_raw_csv_data(video_sent_rows, video_acked_rows, None)
     del video_sent_rows, video_acked_rows
     gc.colllect()
