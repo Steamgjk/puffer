@@ -883,7 +883,7 @@ def main():
     check_args(args)
     if args.use_csv:
         day_num = (end_dt - start_dt).days+1
-        pool = Pool(processes= day_num)
+        pool = Pool(processes= 5)
         result = []
         raw_in_out = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
         sample_data_sizes = [None for i in range(day_num)]
