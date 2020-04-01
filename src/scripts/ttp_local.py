@@ -452,7 +452,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
     # calculate chunk transmission times
     d = {}
     last_video_ts = {}
-
+    cnt = 0
     for row in video_sent_rows:
         pt = row_to_dict(row, VIDEO_SENT_KEYS)
         session = str(pt["session_id"])
@@ -478,7 +478,10 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         dsv['in_flight'] = float(pt['in_flight'])
         dsv['min_rtt'] = float(pt['min_rtt']) / MILLION  # us -> s
         dsv['rtt'] = float(pt['rtt']) / MILLION  # us -> s
-
+        cnt += 1
+        if cnt % 10000==0:
+            print("cnt=",cnt)
+    print("Middle... FIN ")
     for row in video_acked_rows:
         pt = row_to_dict(row, VIDEO_ACKED_KEYS)
         expt_id = pt['experiment_id']
