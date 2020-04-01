@@ -919,8 +919,8 @@ def main():
         else:
             res = read_csv_proc(0, args, start_dt, None)
             for i in range(Model.FUTURE_CHUNKS):
-                raw_in_out[i]['in'].extend(res_item[i]['in'])
-                raw_in_out[i]['out'].extend(res_item[i]['out'])
+                raw_in_out[i]['in'].extend(res[i]['in'])
+                raw_in_out[i]['out'].extend(res[i]['out'])
         print("row len = ", len(raw_in_out))
         for raw_in_out_item in raw_in_out:
             print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
