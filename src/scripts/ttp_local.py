@@ -917,7 +917,7 @@ def main():
                     raw_in_out[i]['in'].extend(res_item[i]['in'])
                     raw_in_out[i]['out'].extend(res_item[i]['out'])
         else:
-            res = read_csv_proc(i, args, start_dt, None)
+            res = read_csv_proc(0, args, start_dt, None)
             for i in range(Model.FUTURE_CHUNKS):
                 raw_in_out[i]['in'].extend(res_item[i]['in'])
                 raw_in_out[i]['out'].extend(res_item[i]['out'])
