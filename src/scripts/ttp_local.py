@@ -906,6 +906,7 @@ def main():
         for i in range(day_num):
             date_item = start_dt + timedelta(days=i)
             result.append(pool.apply_async(read_csv_proc, args=(i, args, date_item, sample_data_sizes[i] )))
+        print("FIN Proce")
         pool.close()
         pool.join()
         print("join fin")
