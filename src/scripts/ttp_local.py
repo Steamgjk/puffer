@@ -12,6 +12,7 @@ import numpy as np
 from multiprocessing import Process, Array, Pool
 import pandas as pd
 import matplotlib
+import gc
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -808,6 +809,8 @@ def read_csv_proc(proc_id, args, date_item, sample_size):
     video_sent_rows =  read_csv_to_rows(video_sent_file_name)
     video_acked_rows = read_csv_to_rows(video_acked_file_name)
     raw_data = process_raw_csv_data(video_sent_rows, video_acked_rows, None)
+    del video_sent_rows, video_acked_rows
+    gc.colllect()
     # collect input and output data from raw data
     raw_in_out = prepare_input_output(raw_data)
     if sample_size is not None:
