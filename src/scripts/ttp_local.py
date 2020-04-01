@@ -897,28 +897,34 @@ def main():
     check_args(args)
     if args.use_csv:
         day_num = (end_dt - start_dt).days+1
-        pool = Pool(processes= 7)
-        result = []
         raw_in_out = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
         sample_data_sizes = [None for i in range(day_num)]
-        if args.use_sample:
-            sample_data_sizes = calc_sample_sizes(day_num)
-        for i in range(day_num):
-            date_item = start_dt + timedelta(days=i)
-            result.append(pool.apply_async(read_csv_proc, args=(i, args, date_item, sample_data_sizes[i] )))
-        print("FIN Proce")
-        pool.close()
-        pool.join()
-        print("join fin")
-        for res in result:
-            res_item = res.get()
+        if day_num > 1:
+            pool = Pool(processes= 7)
+            result = []    
+            if args.use_sample:
+                sample_data_sizes = calc_sample_sizes(day_num)
+            for i in range(day_num):
+                date_item = start_dt + timedelta(days=i)
+                result.append(pool.apply_async(read_csv_proc, args=(i, args, date_item, sample_data_sizes[i] )))
+            print("FIN Proce")
+            pool.close()
+            pool.join()
+            print("join fin")
+            for res in result:
+                res_item = res.get()
+                for i in range(Model.FUTURE_CHUNKS):
+                    raw_in_out[i]['in'].extend(res_item[i]['in'])
+                    raw_in_out[i]['out'].extend(res_item[i]['out'])
+        else:
+            res = read_csv_proc(i, args, start_dt, None)
             for i in range(Model.FUTURE_CHUNKS):
                 raw_in_out[i]['in'].extend(res_item[i]['in'])
                 raw_in_out[i]['out'].extend(res_item[i]['out'])
         print("row len = ", len(raw_in_out))
         for raw_in_out_item in raw_in_out:
             print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
-        
+
     elif not args.cl:
         # query InfluxDB and retrieve raw data
         raw_data = prepare_raw_data(args.yaml_settings,
