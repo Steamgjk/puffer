@@ -25,13 +25,6 @@ VIDEO_ACKED_FILE_PREFIX = 'video_acked_'
 CLIENT_BUFFER_FILE_PREFIX = 'client_buffer_'
 FILE_SUFFIX = 'T11.csv'
 FILE_CHUNK_SIZE = 10000
-VIDEO_SENT_KEY_INDEXES={'timestamp':0, 'session_id': 1,	
-'experiment_id':2, 'channel_name':3, 'chunk_presentation_timestamp':4, 'resolution':5,
-'chunk_size':6, 'ssim_index':7,	'cwnd':8, 'in_flight':9, 'min_rtt':10,'rtt':11,'delivery_rate':12}
-VIDEO_ACKED_KEY_INDEXES={'timestamp':0, 'session_id': 1,	
-'experiment_id':2, 'channel_name':3, 'chunk_presentation_timestamp':4}
-CLIENT_BUFFER_KEY_INDEXES={'timestamp':0, 'session_id': 1,	
-'experiment_id':2, 'channel_name':3, 'event':4, 'playback_buffer':5, 'cumulative_rebuffer':6}
 VIDEO_SENT_KEYS=['timestamp', 'session_id',	
 'experiment_id', 'channel_name', 'chunk_presentation_timestamp', 'resolution',
 'chunk_size', 'ssim_index',	'cwnd', 'in_flight', 'min_rtt','rtt','delivery_rate']
@@ -39,7 +32,7 @@ VIDEO_ACKED_KEYS=['timestamp', 'session_id',
 'experiment_id', 'channel_name', 'chunk_presentation_timestamp']
 CLIENT_BUFFER_KEYS=['timestamp', 'session_id',	
 'experiment_id', 'channel_name', 'event', 'playback_buffer', 'cumulative_rebuffer']
-
+DEBUG = False
 
 
 VIDEO_DURATION = 180180
@@ -313,6 +306,16 @@ def check_args(args):
         # reduce number of epochs if training on a previous model
         global NUM_EPOCHS
         NUM_EPOCHS = 300
+    if args.use_debug:
+        global DEBUG
+        DEBUG = True
+    
+    if args.max_samples:
+        global CL_MAX_DATA_SIZE
+        CL_MAX_DATA_SIZE = args.max_samples
+    if args.discount:
+        global CL_DISCOUNT
+        CL_DISCOUNT = args.discount
 
 
 def calculate_trans_times(video_sent_results, video_acked_results,
@@ -421,6 +424,7 @@ def prepare_raw_data(yaml_settings_path, time_start, time_end, cc):
     return ret
 
 def read_csv_to_rows(data_file):
+    global DEBUG
     merge_dt = pd.read_csv( data_file,  
                             header=None, encoding="utf_8", engine='python' , 
                             iterator = True, chunksize=FILE_CHUNK_SIZE ) 
@@ -432,8 +436,8 @@ def read_csv_to_rows(data_file):
         row_cnt += chunk.shape[0]
         print(data_file +' row_cnt=', row_cnt)
         # for test
-        #if row_cnt >= 10000:
-        #    break
+        if DEBUG and row_cnt >= 10000:
+            break
     return rows
 def row_to_dict(row, key_list):
     pt = {}
@@ -454,23 +458,17 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         # filter data points by congestion control
         if cc is not None and is_cc(pt["experiment_id"], cc):
             continue
-
         if session not in d:
             d[session] = {}
             last_video_ts[session] = None
-
         #print("chunk presentation time ",pt['chunk_presentation_timestamp'])
         video_ts = int(pt['chunk_presentation_timestamp'])
-
         if last_video_ts[session] is not None:
             if video_ts != last_video_ts[session] + VIDEO_DURATION:
                 continue
-
         last_video_ts[session] = video_ts
-
         d[session][video_ts] = {}
         dsv = d[session][video_ts]  # short name
-
         dsv['sent_ts'] = np.datetime64(pt['timestamp'], 'ms')
         dsv['size'] = float(pt['chunk_size']) / PKT_BYTES  # bytes -> packets
         # byte/second -> packet/second
@@ -487,16 +485,12 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         # filter data points by congestion control
         if cc is not None and is_cc(expt_id, cc):
             continue
-
         if session not in d:
             continue
-
         video_ts = int(pt['chunk_presentation_timestamp'])
         if video_ts not in d[session]:
             continue
-
         dsv = d[session][video_ts]  # short name
-
         # calculate transmission time
         sent_ts = dsv['sent_ts']
         acked_ts = np.datetime64(pt['timestamp'], 'ms')
@@ -564,11 +558,9 @@ def prepare_input_output(d):
             # generate FUTURE_CHUNKS rows
             for i in range(Model.FUTURE_CHUNKS):
                 row_i = row.copy()
-
                 ts = next_ts + i * VIDEO_DURATION
                 if ts in ds and 'trans_time' in ds[ts]:
                     row_i += [ds[ts]['size']]
-
                     assert(len(row_i) == Model.DIM_IN)
                     ret[i]['in'].append(row_i)
                     ret[i]['out'].append(ds[ts]['trans_time'])
@@ -666,6 +658,7 @@ def plot_loss(losses, figure_path):
 
 
 def train(i, args, model, input_data, output_data):
+    print("train ", i, input_data.shape, output_data.shape)
     if TUNING:
         # permutate input and output data before splitting
         perm_indices = np.random.permutation(len(input_data))
@@ -807,20 +800,54 @@ def train_or_eval_model(i, args, raw_in_data, raw_out_data):
         # train a neural network with data
         train(i, args, model, input_data, output_data)
 
-def read_csv_proc(i, args, date_item):
-    print("io_proc ", i)
+def read_csv_proc(proc_id, args, date_item, sample_size):
+    print("io_proc ", proc_id)
     video_sent_file_name = args.file_path+'/'+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
     video_acked_file_name = args.file_path+'/'+VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
     #client_buffer_file_name = CLIENT_BUFFER_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
     video_sent_rows =  read_csv_to_rows(video_sent_file_name)
     video_acked_rows = read_csv_to_rows(video_acked_file_name)
-    return video_sent_rows,video_acked_rows
-    
+    raw_data = process_raw_csv_data(video_sent_rows, video_acked_rows, None)
+    # collect input and output data from raw data
+    raw_in_out = prepare_input_output(raw_data)
+    if sample_size is not None:
+        ret = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
+        for i in range(Model.FUTURE_CHUNKS):
+            perm_indices = np.random.permutation(len(raw_in_out[i]['out']))[:sample_size]
+            for j in perm_indices:
+                ret[i]['in'].append(raw_in_out[i]['in'][j])
+                ret[i]['out'].append(raw_in_out[i]['out'][j])
+        raw_in_out = ret
+    print("io_proc ", proc_id, " ", len(raw_data)," ", len(raw_in_out))
+    for raw_in_out_item in raw_in_out:
+        print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
+    #return raw_in_out, video_sent_rows, video_acked_rows
+    #return video_sent_rows, video_acked_rows
+    return raw_in_out
+
+def calc_sample_sizes(day_num):
+    # calculate sampling weights and max data size to sample
+    sample_data_sizes = []
+    total_weights = 0
+    for day in range(day_num):
+        total_weights += CL_DISCOUNT ** day
+    for day in range(day_num-1,-1, -1):
+        sample_data_sizes.append(
+            int((CL_DISCOUNT ** day / total_weights) * CL_MAX_DATA_SIZE))
+    return sample_data_sizes
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--use-csv', action='store_true', 
+    parser.add_argument('--use-csv', dest='use_csv', action='store_true', 
                         help='use csv files and the data source')
+    parser.add_argument('--use-sample', dest='use_sample', action='store_true', 
+                        help='use sampling method with the data source')
+    parser.add_argument('--use-debug', dest='use_debug', action='store_true', 
+                        help='in debug mode')      
+    parser.add_argument('--max-samples', dest='max_samples', type=int,
+                        help='max number of sample data (default 1 million)')   
+    parser.add_argument('--discount', dest='discount', type=float,
+                        help='discount of sampling (default 0.9)')                     
     parser.add_argument('--file-path', dest='file_path',
                         help='path of training data')  
     parser.add_argument('--start-date', dest='start_date',
@@ -852,29 +879,28 @@ def main():
     # validate and process args
     check_args(args)
     if args.use_csv:
-        video_sent_rows = []
-        video_acked_rows = []
-        client_buffer_rows = []
-
-        process_num = (end_dt - start_dt).days+1
-        pool = Pool(processes= process_num)
+        day_num = (end_dt - start_dt).days+1
+        pool = Pool(processes= day_num)
         result = []
-        for i in range(process_num):
+        raw_in_out = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
+        sample_data_sizes = [None for i in range(day_num)]
+        if args.use_sample:
+            sample_data_sizes = calc_sample_sizes(day_num)
+        for i in range(day_num):
             date_item = start_dt + timedelta(days=i)
-            result.append(pool.apply_async(read_csv_proc, args=(i, args, date_item, )))
+            result.append(pool.apply_async(read_csv_proc, args=(i, args, date_item, sample_data_sizes[i] )))
         pool.close()
         pool.join()
         print("join fin")
         for res in result:
-            video_sent_rows.extend(res.get()[0])
-            video_acked_rows.extend(res.get()[1])
-            
-        print(len(video_sent_rows)," ", len(video_acked_rows))
-        # exit(0)
-        print("row len = ", len(video_sent_rows))
-        raw_data = process_raw_csv_data(video_sent_rows, video_acked_rows, None)
-        # collect input and output data from raw data
-        raw_in_out = prepare_input_output(raw_data)
+            res_item = res.get()
+            for i in range(Model.FUTURE_CHUNKS):
+                raw_in_out[i]['in'].extend(res_item[i]['in'])
+                raw_in_out[i]['out'].extend(res_item[i]['out'])
+        print("row len = ", len(raw_in_out))
+        for raw_in_out_item in raw_in_out:
+            print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
+        
     elif not args.cl:
         # query InfluxDB and retrieve raw data
         raw_data = prepare_raw_data(args.yaml_settings,
