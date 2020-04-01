@@ -817,15 +817,18 @@ def read_csv_proc(proc_id, args, date_item, sample_size):
     del raw_data
     gc.collect()
     if sample_size is not None:
+        print("io_proc ", proc_id, " sampling...", sample_size)
         ret = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
         for i in range(Model.FUTURE_CHUNKS):
             perm_indices = np.random.permutation(len(raw_in_out[i]['out']))[:sample_size]
             for j in perm_indices:
                 ret[i]['in'].append(raw_in_out[i]['in'][j])
                 ret[i]['out'].append(raw_in_out[i]['out'][j])
+        print("io_proc ", proc_id, " sampling got...", sample_size)
         del raw_in_out
         gc.collect()
         raw_in_out = ret
+    print("io_proc ", proc_id, " sampling FIN")
     for raw_in_out_item in raw_in_out:
         print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
     #return raw_in_out, video_sent_rows, video_acked_rows
