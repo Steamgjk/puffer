@@ -282,7 +282,13 @@ def main():
     partition = int(day_num /4)
     start_idx = 0
     end_idx = start_idx + partition
-    for j in range(4):  
+    for j in range(3,4):  
+        start_idx = j* partition
+        end_idx  = start_idx + partition
+        if j ==3:
+            end_idx = day_num+1
+        print("startidx =", start_idx)
+        exit(0)
         pool = Pool(processes= (end_idx-start_idx))
         result = [] 
         for i in range(start_idx, end_idx): 
@@ -296,8 +302,7 @@ def main():
         pool.join()
         start_idx += partition
         end_idx = start_idx+ partition
-        if j ==3:
-            end_idx = day_num+1
+        
 
 if __name__ == '__main__':
     main()
