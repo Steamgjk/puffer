@@ -282,17 +282,17 @@ def main():
     partition = int(day_num /4)
     start_idx = 0
     end_idx = start_idx + partition
-    for j in range(3,4):  
+    for j in range(4):  
         start_idx = j* partition
         end_idx  = start_idx + partition
         if j ==3:
-            end_idx = day_num+1
+            end_idx = day_num
         print("startidx =", start_idx, " endidx=", end_idx)
         
         pool = Pool(processes= (end_idx-start_idx))
         result = [] 
-        #for i in range(start_idx, end_idx): 
-        for i in range(20, 21): 
+        for i in range(start_idx, end_idx): 
+        #for i in range(20, 21): 
             date_item = start_dt + timedelta(days=i)
             print(date_item)
             result.append(pool.apply_async(read_and_write_csv_proc, args=(i, args, date_item, None )))
