@@ -288,7 +288,6 @@ def main():
         if j ==3:
             end_idx = day_num+1
         print("startidx =", start_idx)
-        exit(0)
         pool = Pool(processes= (end_idx-start_idx))
         result = [] 
         for i in range(start_idx, end_idx): 
