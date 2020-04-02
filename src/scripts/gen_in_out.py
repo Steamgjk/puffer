@@ -288,14 +288,15 @@ def main():
         if j ==3:
             end_idx = day_num+1
         print("startidx =", start_idx, " endidx=", end_idx)
-        exit(0)
+        
         pool = Pool(processes= (end_idx-start_idx))
         result = [] 
         for i in range(start_idx, end_idx): 
             date_item = start_dt + timedelta(days=i)
-            result.append(pool.apply_async(read_and_write_csv_proc, args=(i, args, date_item, None )))
+            print(date_item)
+            #result.append(pool.apply_async(read_and_write_csv_proc, args=(i, args, date_item, None )))
         print("FIN Proce")
-        
+        exit(0)
         for res in result:
             res.get()
         pool.close()
