@@ -291,12 +291,12 @@ def main():
         
         pool = Pool(processes= (end_idx-start_idx))
         result = [] 
-        for i in range(start_idx, end_idx): 
+        #for i in range(start_idx, end_idx): 
+        for i in range(20, 21): 
             date_item = start_dt + timedelta(days=i)
             print(date_item)
-            #result.append(pool.apply_async(read_and_write_csv_proc, args=(i, args, date_item, None )))
+            result.append(pool.apply_async(read_and_write_csv_proc, args=(i, args, date_item, None )))
         print("FIN Proce")
-        exit(0)
         for res in result:
             res.get()
         pool.close()
