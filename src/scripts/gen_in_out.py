@@ -280,7 +280,7 @@ def main():
     day_num = (end_dt - start_dt).days+1
     pool = Pool(processes= 32)
     result = []  
-    partition = day_num /4
+    partition = int(day_num /4)
     start_idx = 0
     end_idx = start_idx + partition
     for j in range(4):  
