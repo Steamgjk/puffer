@@ -178,7 +178,7 @@ def read_and_write_csv_proc(proc_id, args, date_item, sample_size):
 
     del raw_in_out
     gc.collect()
-    print("Write Fin")
+    print("Write Fin ", in_file_name, " ",out_file_name )
     return 0
 
 def row_to_dict(row, key_list):
@@ -287,7 +287,8 @@ def main():
         end_idx  = start_idx + partition
         if j ==3:
             end_idx = day_num+1
-        print("startidx =", start_idx)
+        print("startidx =", start_idx, " endidx=", end_idx)
+        exit(0)
         pool = Pool(processes= (end_idx-start_idx))
         result = [] 
         for i in range(start_idx, end_idx): 

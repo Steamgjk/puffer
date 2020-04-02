@@ -20,6 +20,8 @@ from helpers import (
     connect_to_influxdb, connect_to_postgres,
     make_sure_path_exists, retrieve_expt_config, create_time_clause,
     get_expt_id, get_user)
+from plot_helpers import (
+    distr_bin_pred, distr_l1_pred, distr_l2_pred)
 
 VIDEO_SENT_FILE_PREFIX = 'video_sent_'
 VIDEO_ACKED_FILE_PREFIX = 'video_acked_'
@@ -132,11 +134,12 @@ class Model:
 
         return z
 
+
+
     # special discretization: [0, 0.5 * BIN_SIZE)
     # [0.5 * BIN_SIZE, 1.5 * BIN_SIZE), [1.5 * BIN_SIZE, 2.5 * BIN_SIZE), ...
     def discretize_output(self, raw_out):
         z = np.array(raw_out)
-
         z = np.floor((z + 0.5 * Model.BIN_SIZE) / Model.BIN_SIZE).astype(int)
         return np.clip(z, 0, Model.BIN_MAX)
 
@@ -183,6 +186,22 @@ class Model:
             correct += (y_predicted == y).sum().item()
 
         return correct / total
+    # compute mean square error of the classifier based on its expected value of distribution
+    # (input_data and output_data have been normalized)
+    def compute_mse(self, input_data, output_data):
+        result = {'bin':[], 'l1':[], 'l2':[] }
+        with torch.no_grad():
+            x = torch.from_numpy(input_data).to(device=DEVICE)
+            y = self.model(x)
+            abl_distr = torch.nn.functional.softmax(y, dim=1).double().numpy()
+        bin_abl_out = distr_bin_pred(abl_distr)
+        l1_abl_out = distr_l1_pred(abl_distr)
+        l2_abl_out = distr_l2_pred(abl_distr)
+        result['bin'] += bin_acc(bin_abl_out[0], raw_out[0])
+        result['l1'] += l1_loss(l1_abl_out[0], raw_out[0])
+        result['l2'] += l2_loss(l2_abl_out[0], raw_out[0])
+        return result
+
 
     def predict(self, input_data):
         with torch.no_grad():
