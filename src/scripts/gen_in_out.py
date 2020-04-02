@@ -278,13 +278,14 @@ def main():
     start_dt = datetime.strptime(args.start_date,"%Y%m%d")
     end_dt = datetime.strptime(args.end_date,"%Y%m%d")
     day_num = (end_dt - start_dt).days+1
-    pool = Pool(processes= 32)
-    result = []  
+
     partition = int(day_num /4)
     start_idx = 0
     end_idx = start_idx + partition
     for j in range(4):  
-        for i in range(start_idx, start_idx + partition):
+        pool = Pool(processes= (end_idx-start_idx))
+        result = [] 
+        for i in range(start_idx, end_idx): 
             date_item = start_dt + timedelta(days=i)
             result.append(pool.apply_async(read_and_write_csv_proc, args=(i, args, date_item, None )))
         print("FIN Proce")
