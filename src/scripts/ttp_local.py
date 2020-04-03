@@ -188,7 +188,8 @@ class Model:
         return correct / total
     # compute mean square error of the classifier based on its expected value of distribution
     # (input_data and output_data have been normalized)
-    def compute_mse(self, input_data, output_data):
+    def compute_mse(self, raw_in, raw_out):
+        input_data = model.normalize_input(raw_in, update_obs=False)
         result = {'bin':[], 'l1':[], 'l2':[] }
         with torch.no_grad():
             x = torch.from_numpy(input_data).to(device=DEVICE)
@@ -197,9 +198,9 @@ class Model:
         bin_abl_out = distr_bin_pred(abl_distr)
         l1_abl_out = distr_l1_pred(abl_distr)
         l2_abl_out = distr_l2_pred(abl_distr)
-        result['bin'] += bin_acc(bin_abl_out[0], raw_out[0])
-        result['l1'] += l1_loss(l1_abl_out[0], raw_out[0])
-        result['l2'] += l2_loss(l2_abl_out[0], raw_out[0])
+        result['bin'] += bin_acc(bin_abl_out[0], raw_out)
+        result['l1'] += l1_loss(l1_abl_out[0], raw_out)
+        result['l2'] += l2_loss(l2_abl_out[0], raw_out)
         return result
 
 
@@ -827,6 +828,33 @@ def train_or_eval_model(i, args, raw_in_data, raw_out_data):
         # train a neural network with data
         train(i, args, model, input_data, output_data)
 
+def read_raw_data(proc_id, args, date_item, sample_size):
+    raw_in_out = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
+    for i in range(Model.FUTURE_CHUNKS):
+        ret_in = []
+        ret_out = []
+        in_file_name = args.output_path + '/'+date_item.strftime('%Y-%m-%d')+"-"+str(i) +".in"
+        with open(in_file_name) as f:
+            for line in f:
+                arr = eval(line)
+                ret_in.append(arr)
+        f.close()
+        out_file_name = args.output_path + '/'+date_item.strftime('%Y-%m-%d')+"-"+str(i) +".out"
+        with open(out_file_name) as f:
+            for line in f:
+                arr = eval(line)
+                ret_out.extend(arr)
+        f.close()
+        if sample_size is not None:
+            perm_indices = np.random.permutation(len(raw_in_out[i]['out']))[:sample_size]
+            for j in perm_indices:
+                raw_in_out[i]['in'].append(ret_in[j])
+                raw_in_out[i]['out'].extend(ret_out[j])
+        del ret_in, ret_out
+        gc.collect()
+    return raw_in_out
+
+
 def read_csv_proc(proc_id, args, date_item, sample_size):
     print("io_proc ", proc_id)
     video_sent_file_name = args.file_path+'/'+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
@@ -886,6 +914,8 @@ def main():
                         help='discount of sampling (default 0.9)')                     
     parser.add_argument('--file-path', dest='file_path',
                         help='path of training data')  
+    parser.add_argument('--output-path', dest='output_path',
+                        help='output path of pre-processsed data')                      
     parser.add_argument('--start-date', dest='start_date',
                         help='start date of the training data')  
     parser.add_argument('--end-date', dest='end_date',
@@ -925,7 +955,8 @@ def main():
                 sample_data_sizes = calc_sample_sizes(day_num)
             for i in range(day_num):
                 date_item = start_dt + timedelta(days=i)
-                result.append(pool.apply_async(read_csv_proc, args=(i, args, date_item, sample_data_sizes[i] )))
+                result.append(pool.apply_async(read_raw_data, args=(i, args, date_item, sample_data_sizes[i] )))
+                #result.append(pool.apply_async(read_csv_proc, args=(i, args, date_item, sample_data_sizes[i] )))
             print("FIN Proce")
             pool.close()
             pool.join()
@@ -936,7 +967,8 @@ def main():
                     raw_in_out[i]['in'].extend(res_item[i]['in'])
                     raw_in_out[i]['out'].extend(res_item[i]['out'])
         else:
-            res = read_csv_proc(0, args, start_dt, None)
+            res = read_raw_data(0, args, start_dt, None)
+            #res = read_csv_proc(0, args, start_dt, None)
             for i in range(Model.FUTURE_CHUNKS):
                 raw_in_out[i]['in'].extend(res[i]['in'])
                 raw_in_out[i]['out'].extend(res[i]['out'])
