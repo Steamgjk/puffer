@@ -186,22 +186,7 @@ class Model:
             correct += (y_predicted == y).sum().item()
 
         return correct / total
-    # compute mean square error of the classifier based on its expected value of distribution
-    # (input_data and output_data have been normalized)
-    def compute_mse(self, raw_in, raw_out):
-        input_data = model.normalize_input(raw_in, update_obs=False)
-        result = {'bin':[], 'l1':[], 'l2':[] }
-        with torch.no_grad():
-            x = torch.from_numpy(input_data).to(device=DEVICE)
-            y = self.model(x)
-            abl_distr = torch.nn.functional.softmax(y, dim=1).double().numpy()
-        bin_abl_out = distr_bin_pred(abl_distr)
-        l1_abl_out = distr_l1_pred(abl_distr)
-        l2_abl_out = distr_l2_pred(abl_distr)
-        result['bin'] += bin_acc(bin_abl_out[0], raw_out)
-        result['l1'] += l1_loss(l1_abl_out[0], raw_out)
-        result['l2'] += l2_loss(l2_abl_out[0], raw_out)
-        return result
+
 
 
     def predict(self, input_data):
@@ -863,6 +848,31 @@ def read_raw_data(proc_id, args, date_item, sample_size):
         gc.collect()
     return raw_in_out
 
+# compute mean square error of the classifier based on its expected value of distribution
+# (input_data and output_data have been normalized)
+def compute_mse(proc_id, raw_in, raw_out):
+        # create or load a model
+    model = Model()
+    if args.load_model:
+        model_path = path.join(args.load_model, 'py-{}.pt'.format(proc_id))
+        model.load(model_path)
+        sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
+    else:
+        sys.stderr.write('No model path specified\n')
+    sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
+    input_data = model.normalize_input(raw_in, update_obs=False)
+    result = {'bin':[], 'l1':[], 'l2':[] }
+    with torch.no_grad():
+        x = torch.from_numpy(input_data).to(device=DEVICE)
+        y = model(x)
+        abl_distr = torch.nn.functional.softmax(y, dim=1).double().numpy()
+    bin_abl_out = distr_bin_pred(abl_distr)
+    l1_abl_out = distr_l1_pred(abl_distr)
+    l2_abl_out = distr_l2_pred(abl_distr)
+    result['bin'] += bin_acc(bin_abl_out[0], raw_out)
+    result['l1'] += l1_loss(l1_abl_out[0], raw_out)
+    result['l2'] += l2_loss(l2_abl_out[0], raw_out)
+    return result
 
 def read_csv_proc(proc_id, args, date_item, sample_size):
     print("io_proc ", proc_id)
@@ -972,10 +982,8 @@ def main():
                 res_item = res.get()
                 for i in range(Model.FUTURE_CHUNKS):
                     print("i=",i," ", len(res_item[i]['in']), " ", len(res_item[i]['out']) )
-
                     raw_in_out[i]['in'].extend(res_item[i]['in'])
                     raw_in_out[i]['out'].extend(res_item[i]['out'])
-            
             pool.close()
             pool.join()
             print("join fin")
@@ -1000,10 +1008,14 @@ def main():
 
     # train or test FUTURE_CHUNKS models
     proc_list = []
+
     for i in range(Model.FUTURE_CHUNKS):
+    
+        compute_mse(self, proc_id, raw_in, raw_out):
+
         proc = Process(target=train_or_eval_model,
-                       args=(i, args,
-                             raw_in_out[i]['in'], raw_in_out[i]['out'],))
+                    args=(i, args,
+                            raw_in_out[i]['in'], raw_in_out[i]['out'],))
         proc.start()
         proc_list.append(proc)
 
