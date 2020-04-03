@@ -268,7 +268,7 @@ def check_args(args):
             if path.isfile(meta_path):
                 sys.exit('Error: meta {} already exists'.format(meta_path))
 
-    if args.inference:
+    if args.inference or args.compute_mse:
         if not args.load_model:
             sys.exit('Error: need to load model before inference')
 
@@ -826,7 +826,7 @@ def read_raw_data(proc_id, args, date_item, sample_size):
                 arr = eval(line)
                 ret_in.append(arr)
                 cnt += 1
-                if cnt%10000 == 0:
+                if cnt%100000 == 0:
                     print('proc_id=', proc_id," ", cnt)
         f.close()
         out_file_name = args.output_path + '/'+date_item.strftime('%Y-%m-%d')+"-"+str(i) +".out"

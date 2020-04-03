@@ -558,7 +558,11 @@ def plot_loss(losses, figure_path):
     fig.savefig(figure_path, dpi=300, bbox_inches='tight', pad_inches=0.2)
     sys.stderr.write('Saved plot to {}\n'.format(figure_path))
 
-
+def early_stop(train_loss):
+    if len(train_loss) >=3 and abs(train_loss[-1]- train_loss[-2]) < 0.0001 and abs(train_loss[-2]- train_loss[-3]) < 0.0001:
+        return True
+    else:
+        return False 
 def train(i, args, model, input_data, output_data):
     if TUNING:
         # permutate input and output data before splitting
@@ -627,12 +631,14 @@ def train(i, args, model, input_data, output_data):
                                      validate_loss, validate_accuracy))
         else:
             train_losses.append(running_loss)
-            sys.stderr.write('[{}] epoch {}: training loss {:.3f}\n'
+            sys.stderr.write('[{}] epoch {}: training loss {:.5f}\n'
                              .format(i, epoch_id, running_loss))
+            
 
         # save checkpoints or the final model
-        if epoch_id % CHECKPOINT == 0 or epoch_id == NUM_EPOCHS:
-            if epoch_id == NUM_EPOCHS:
+        can_stop = early_stop(train_loss)
+        if epoch_id % CHECKPOINT == 0 or epoch_id == NUM_EPOCHS or can_stop:
+            if epoch_id == NUM_EPOCHS or can_stop:
                 suffix = ''
             else:
                 suffix = '-checkpoint-{}'.format(epoch_id)
@@ -660,6 +666,8 @@ def train(i, args, model, input_data, output_data):
             loss_path = path.join(args.save_model,
                                   'loss{}{}.png'.format(i, suffix))
             plot_loss(losses, loss_path)
+            if can_stop:
+                break
 
 
 def train_or_eval_model(i, args, raw_in_data, raw_out_data):
