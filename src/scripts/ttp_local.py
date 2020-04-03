@@ -813,7 +813,7 @@ def train_or_eval_model(i, args, raw_in_data, raw_out_data):
     output_data = model.discretize_output(raw_out_data)
 
     # print some stats
-    print_stats(i, output_data)
+    print_stats(i, output_data) 
 
     if args.inference:
         model.set_model_eval()
@@ -834,10 +834,15 @@ def read_raw_data(proc_id, args, date_item, sample_size):
         ret_in = []
         ret_out = []
         in_file_name = args.output_path + '/'+date_item.strftime('%Y-%m-%d')+"-"+str(i) +".in"
+        cnt = 0
+        print("in_file_name=",in_file_name, " sample_size=", sample_size)
         with open(in_file_name) as f:
             for line in f:
                 arr = eval(line)
                 ret_in.append(arr)
+                cnt += 1
+                if cnt%10000 == 0:
+                    print('proc_id=', proc_id," ", cnt)
         f.close()
         out_file_name = args.output_path + '/'+date_item.strftime('%Y-%m-%d')+"-"+str(i) +".out"
         with open(out_file_name) as f:
@@ -846,10 +851,14 @@ def read_raw_data(proc_id, args, date_item, sample_size):
                 ret_out.extend(arr)
         f.close()
         if sample_size is not None:
-            perm_indices = np.random.permutation(len(raw_in_out[i]['out']))[:sample_size]
+            perm_indices = np.random.permutation(len(ret_in))[:sample_size]
             for j in perm_indices:
                 raw_in_out[i]['in'].append(ret_in[j])
-                raw_in_out[i]['out'].extend(ret_out[j])
+                raw_in_out[i]['out'].append(ret_out[j])
+        else:
+            raw_in_out[i]['in'] = ret_in
+            raw_in_out[i]['out'] = ret_out
+            
         del ret_in, ret_out
         gc.collect()
     return raw_in_out
@@ -887,6 +896,7 @@ def read_csv_proc(proc_id, args, date_item, sample_size):
         print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
     #return raw_in_out, video_sent_rows, video_acked_rows
     #return video_sent_rows, video_acked_rows
+
     return raw_in_out
 
 def calc_sample_sizes(day_num):
@@ -958,14 +968,17 @@ def main():
                 result.append(pool.apply_async(read_raw_data, args=(i, args, date_item, sample_data_sizes[i] )))
                 #result.append(pool.apply_async(read_csv_proc, args=(i, args, date_item, sample_data_sizes[i] )))
             print("FIN Proce")
-            pool.close()
-            pool.join()
-            print("join fin")
             for res in result:
                 res_item = res.get()
                 for i in range(Model.FUTURE_CHUNKS):
+                    print("i=",i," ", len(res_item[i]['in']), " ", len(res_item[i]['out']) )
+
                     raw_in_out[i]['in'].extend(res_item[i]['in'])
                     raw_in_out[i]['out'].extend(res_item[i]['out'])
+            
+            pool.close()
+            pool.join()
+            print("join fin")
         else:
             res = read_raw_data(0, args, start_dt, None)
             #res = read_csv_proc(0, args, start_dt, None)
@@ -975,7 +988,6 @@ def main():
         print("row len = ", len(raw_in_out))
         for raw_in_out_item in raw_in_out:
             print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
-
     elif not args.cl:
         # query InfluxDB and retrieve raw data
         raw_data = prepare_raw_data(args.yaml_settings,
