@@ -926,6 +926,8 @@ def main():
                         help='use csv files and the data source')
     parser.add_argument('--use-sample', dest='use_sample', action='store_true', 
                         help='use sampling method with the data source')
+    parser.add_argument('--compute-mse', dest='compute_mse', action='store_true', 
+                        help='whether compute the mean square error')
     parser.add_argument('--use-debug', dest='use_debug', action='store_true', 
                         help='in debug mode')      
     parser.add_argument('--max-samples', dest='max_samples', type=int,
@@ -1008,16 +1010,18 @@ def main():
 
     # train or test FUTURE_CHUNKS models
     proc_list = []
-
-    for i in range(Model.FUTURE_CHUNKS):
-    
-        compute_mse(self, proc_id, raw_in, raw_out):
-
-        proc = Process(target=train_or_eval_model,
-                    args=(i, args,
-                            raw_in_out[i]['in'], raw_in_out[i]['out'],))
-        proc.start()
-        proc_list.append(proc)
+    if args.compute_mse:
+        for i in range(Model.FUTURE_CHUNKS):
+            proc = Process(target=compute_mse,
+                        args=(i, raw_in_out[i]['in'], raw_in_out[i]['out'],))
+            proc.start()
+            proc_list.append(proc)
+    else:
+        for i in range(Model.FUTURE_CHUNKS):
+            proc = Process(target=train_or_eval_model,
+                        args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],))
+            proc.start()
+            proc_list.append(proc)
 
     # wait for all processes to finish
     for proc in proc_list:
