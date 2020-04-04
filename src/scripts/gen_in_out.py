@@ -109,7 +109,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
             print("\n\n\n")
     cnt = 0
     print("Check FIN")
-    exit(0)
+
     f = open("logge400", "w")
 
     for row in video_acked_rows:
@@ -127,6 +127,9 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         dsv = d[session][video_ts]  # short name
         # calculate transmission time
         sent_ts = dsv['sent_ts']
+        if sent_ts < 1500000000000:
+            print("Abnormal2 ", session," ", video_ts," ", dsv['sent_ts'])
+            print("\n\n\n")
         #acked_ts = np.datetime64(pt['timestamp'], 'ms')
         acked_ts =  pt['timestamp']
         dsv['acked_ts'] = acked_ts
