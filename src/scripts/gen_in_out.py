@@ -103,6 +103,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         if cnt % 100000==0:
             print(" video_sent_rows cnt=",cnt)
     cnt = 0
+    f = open("logge400", "w")
 
     for row in video_acked_rows:
         pt = row_to_dict(row, VIDEO_ACKED_KEYS)
@@ -124,7 +125,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         dsv['acked_ts'] = acked_ts
         #dsv['trans_time'] = (acked_ts - sent_ts) / np.timedelta64(1, 's')
         dsv['trans_time'] = (acked_ts - sent_ts) / 1000
-        f = open("logge400", "w")
+        
         if dsv['trans_time'] > 400:
             line = str(dsv['debug_session'])+ " "+ str(video_ts)+" "+ str(acked_ts)+ " "+str(sent_ts)+ " "+ str(dsv)
             f.write(line+"\n")
