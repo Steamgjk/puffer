@@ -180,7 +180,7 @@ class Model:
             x = torch.from_numpy(input_data).to(device=DEVICE)
             y = self.model(x)
             abl_distr = torch.nn.functional.softmax(y, dim=1).double().numpy()
-            print("abl_distr ", type(abl_distr), abl_distr.shape)
+            #print("abl_distr ", type(abl_distr), abl_distr.shape)
             print(np.sum(abl_distr[0]))
         bin_abl_out = distr_bin_pred(abl_distr)
         l1_abl_out = distr_l1_pred(abl_distr)
@@ -188,11 +188,18 @@ class Model:
         print(type(bin_abl_out)," ", len(bin_abl_out))
         print(type(output_data)," ", len(output_data))
 
-        print("LS VS ", l2_abl_out[:10], " VS ", output_data[:10])
+        #print("LS VS ", l2_abl_out[:10], " VS ", output_data[:10])
 
         bacc = bin_acc(bin_abl_out, output_data)
         loss1 = l1_loss(l1_abl_out, output_data)
         loss2 = l2_loss(l2_abl_out, output_data)
+        loss2_shadow = []
+        for i in range(len(l2_abl_out)):
+            ans = (l2_abl_out[i]-output_data[i])*(l2_abl_out[i]-output_data[i])
+            loss2_shadow.append(ans)
+        for i in range(len(l2_abl_out)):
+            if loss2[i] != loss2_shadow[i]:
+                print("Noequal ", loss2[i], " ", loss2_shadow[i])
         with open("expected-"+str(proc_id), "w") as f1:
             f1.write(str(l2_abl_out))
         with open("debug_l2-"+str(proc_id), "w") as f1:
