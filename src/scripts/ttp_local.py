@@ -193,7 +193,9 @@ class Model:
         bacc = bin_acc(bin_abl_out, output_data)
         loss1 = l1_loss(l1_abl_out, output_data)
         loss2 = l2_loss(l2_abl_out, output_data)
-        print("sum ", np.sum(bacc), " size ", )
+        with open("debug_l2", "w") as f1:
+            f1.write(str(loss2.tolist()))
+        print("sum ", np.sum(loss2), " size ", np.size(loss2))
         result['bin'] = np.sum(bacc)/np.size(bacc)
         result['l1']  =  np.sum(loss1)/np.size(loss1)
         result['l2'] = np.sum(loss2)/np.size(loss2)
