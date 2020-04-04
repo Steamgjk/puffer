@@ -88,6 +88,8 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         last_video_ts[session] = video_ts
         d[session][video_ts] = {}
         dsv = d[session][video_ts]  # short name
+        ## debug
+        dsv['debug_session'] = session
         dsv['sent_ts'] = np.datetime64(pt['timestamp'], 'ms')
         dsv['size'] = float(pt['chunk_size']) / PKT_BYTES  # bytes -> packets
         # byte/second -> packet/second
@@ -116,6 +118,8 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         acked_ts = np.datetime64(pt['timestamp'], 'ms')
         dsv['acked_ts'] = acked_ts
         dsv['trans_time'] = (acked_ts - sent_ts) / np.timedelta64(1, 's')
+        if dsv['trans_time'] > 400:
+            print(">400 ", dsv['debug_session'], " ", acked_ts, " ", sent_ts, " ", dsv)
         cnt += 1
         if cnt % 100000==0:
             print(" video_acked_rows cnt=",cnt)
@@ -157,6 +161,7 @@ def read_and_write_csv_proc(proc_id, args, date_item, sample_size):
                 leng += len(arr)
             print("leng " , leng)
         '''
+        '''
         in_file_obj = open(in_file_name, "w+")
         raw_in_items = raw_in_out[i]['in']
         raw_out_items = raw_in_out[i]['out']
@@ -174,6 +179,7 @@ def read_and_write_csv_proc(proc_id, args, date_item, sample_size):
             idx += 10000
             
         out_file_obj.close()
+        '''
         print("FIN: ", out_file_name)
 
     del raw_in_out
