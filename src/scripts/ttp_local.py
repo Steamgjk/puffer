@@ -180,11 +180,15 @@ class Model:
             x = torch.from_numpy(input_data).to(device=DEVICE)
             y = self.model(x)
             abl_distr = torch.nn.functional.softmax(y, dim=1).double().numpy()
+            print("abl_distr ", type(abl_distr), abl_distr.shape)
+            print(np.sum(abl_distr[0]))
         bin_abl_out = distr_bin_pred(abl_distr)
         l1_abl_out = distr_l1_pred(abl_distr)
         l2_abl_out = distr_l2_pred(abl_distr)
         print(type(bin_abl_out)," ", len(bin_abl_out))
         print(type(output_data)," ", len(output_data))
+
+        print("LS VS ", l2_abl_out[:10], " VS ", output_data[:10])
 
         bacc = bin_acc(bin_abl_out, output_data)
         loss1 = l1_loss(l1_abl_out, output_data)
@@ -1031,14 +1035,16 @@ def main():
         for i in range(Model.FUTURE_CHUNKS):
             proc = Process(target=get_mse,
                         args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],))
-            proc.start()
             proc_list.append(proc)
+        for proc in proc_list:
+            proc.start()
     else:
         for i in range(Model.FUTURE_CHUNKS):
             proc = Process(target=train_or_eval_model,
                         args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],))
-            proc.start()
             proc_list.append(proc)
+        for proc in proc_list:
+            proc.start()
 
     # wait for all processes to finish
     for proc in proc_list:
