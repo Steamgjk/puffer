@@ -21,7 +21,7 @@ from helpers import (
     make_sure_path_exists, retrieve_expt_config, create_time_clause,
     get_expt_id, get_user)
 from plot_helpers import (
-    distr_bin_pred, distr_l1_pred, distr_l2_pred)
+    distr_bin_pred, distr_l1_pred, distr_l2_pred, l1_loss, l2_loss, bin_acc)
 
 VIDEO_SENT_FILE_PREFIX = 'video_sent_'
 VIDEO_ACKED_FILE_PREFIX = 'video_acked_'
@@ -169,6 +169,31 @@ class Model:
             loss = self.loss_fn(y_scores, y)
 
             return loss.item()
+
+    # compute mean square error of the classifier based on its expected value of distribution
+    # (input_data and output_data have been normalized)
+    def compute_mse(self, input_data, output_data):
+        result = {'bin':[], 'l1':[], 'l2':[] }
+        input_data = np.asarray(input_data)
+        output_data = np.asarray(output_data)
+        with torch.no_grad():
+            x = torch.from_numpy(input_data).to(device=DEVICE)
+            y = self.model(x)
+            abl_distr = torch.nn.functional.softmax(y, dim=1).double().numpy()
+        bin_abl_out = distr_bin_pred(abl_distr)
+        l1_abl_out = distr_l1_pred(abl_distr)
+        l2_abl_out = distr_l2_pred(abl_distr)
+        print(type(bin_abl_out)," ", len(bin_abl_out))
+        print(type(output_data)," ", len(output_data))
+
+        bacc = bin_acc(bin_abl_out, output_data)
+        loss1 = l1_loss(l1_abl_out, output_data)
+        loss2 = l2_loss(l2_abl_out, output_data)
+        result['bin'] = np.sum(bacc)/np.size(bacc)
+        result['l1']  =  np.sum(loss1)/np.size(loss1)
+        result['l2'] = np.sum(loss2)/np.size(loss2)
+        #print(result)
+        return result
 
     # compute accuracy of the classifier
     def compute_accuracy(self, input_data, output_data):
@@ -850,7 +875,7 @@ def read_raw_data(proc_id, args, date_item, sample_size):
 
 # compute mean square error of the classifier based on its expected value of distribution
 # (input_data and output_data have been normalized)
-def compute_mse(proc_id, raw_in, raw_out):
+def get_mse(proc_id, args, raw_in, raw_out):
         # create or load a model
     model = Model()
     if args.load_model:
@@ -861,17 +886,9 @@ def compute_mse(proc_id, raw_in, raw_out):
         sys.stderr.write('No model path specified\n')
     sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
     input_data = model.normalize_input(raw_in, update_obs=False)
-    result = {'bin':[], 'l1':[], 'l2':[] }
-    with torch.no_grad():
-        x = torch.from_numpy(input_data).to(device=DEVICE)
-        y = model(x)
-        abl_distr = torch.nn.functional.softmax(y, dim=1).double().numpy()
-    bin_abl_out = distr_bin_pred(abl_distr)
-    l1_abl_out = distr_l1_pred(abl_distr)
-    l2_abl_out = distr_l2_pred(abl_distr)
-    result['bin'] += bin_acc(bin_abl_out[0], raw_out)
-    result['l1'] += l1_loss(l1_abl_out[0], raw_out)
-    result['l2'] += l2_loss(l2_abl_out[0], raw_out)
+    output_data = raw_out
+    result = model.compute_mse(input_data, output_data)
+    print("proc_id=",proc_id," ", result)
     return result
 
 def read_csv_proc(proc_id, args, date_item, sample_size):
@@ -1012,8 +1029,8 @@ def main():
     proc_list = []
     if args.compute_mse:
         for i in range(Model.FUTURE_CHUNKS):
-            proc = Process(target=compute_mse,
-                        args=(i, raw_in_out[i]['in'], raw_in_out[i]['out'],))
+            proc = Process(target=get_mse,
+                        args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],))
             proc.start()
             proc_list.append(proc)
     else:
