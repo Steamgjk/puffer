@@ -34,5 +34,74 @@ def main():
         if int(expected[i]) > 10 or int(loss2[i])>100:
             print( expected[i], " ", loss2[i], "\n")
 
+def get_transmission_time(video_send_file, video_acked_file):
+    merge_dt = pd.read_csv( video_send_file,  
+                            header=None, encoding="utf_8", engine='python' , 
+                            iterator = True, chunksize=10000 ) 
+    sent_info = {}
+    row_cnt = 0
+    for chunk in merge_dt:
+        for index, row in chunk.iterrows():
+            sent_time = row[0]  
+            session_id = row[1]
+            presentation_time = row[4]
+            if session_id not in sent_info:
+                sent_info[session_id]={}
+            sent_info[session_id][presentation_time] = sent_time 
+        row_cnt += chunk.shape[0]
+
+    #print("sent info \n")
+    #print(sent_info)
+    merge_dt = pd.read_csv( video_acked_file,  
+                            header=None, encoding="utf_8", engine='python' , 
+                            iterator = True, chunksize=10000 ) 
+    acked_info = {}
+    row_cnt = 0
+    for chunk in merge_dt:
+        for index, row in chunk.iterrows():
+            acked_time = row[0]  
+            session_id = row[1]
+            presentation_time = row[4]
+            #print("acked ", presentation_time)
+            if session_id not in acked_info:
+                acked_info[session_id]={}
+            acked_info[session_id][presentation_time] = acked_time 
+        row_cnt += chunk.shape[0] 
+    
+    #print("acked info \n", acked_info)
+
+    ans = {}
+    for session in acked_info:
+        if session in sent_info:
+            for presentation_time in acked_info[session]:
+                if presentation_time not in sent_info[session]:
+                    #print("Presentation Time ", session, " ", presentation_time, " not in sent")
+                    '''
+                    print("session info keys")
+                    for key in sent_info[session]:
+                        print("keys ", key, "\n")
+                    exit(0)
+                    '''
+                    continue
+                if session not in ans:
+                    ans[session]={}
+                ans[session][presentation_time]=(sent_info[session][presentation_time], 
+                acked_info[session][presentation_time],
+                acked_info[session][presentation_time]-sent_info[session][presentation_time],)
+
+        else:
+            print(session, " not in sent info")
+    return ans
 if __name__ == '__main__':
-    main()
+    #main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sent-file', dest='sent_file',
+                        help='sent file')
+    parser.add_argument('--acked-file', dest='acked_file',
+                        help='acked file')
+    args = parser.parse_args()
+    ans = get_transmission_time(args.sent_file, args.acked_file)
+    print("FINNNNNN\n\n\n")
+    print(len(ans))
+    for itm in ans:
+        print(itm, ans[itm])
