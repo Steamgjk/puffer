@@ -102,7 +102,14 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         cnt += 1
         if cnt % 100000==0:
             print(" video_sent_rows cnt=",cnt)
+        if dsv['sent_ts'] < 1500000000000:
+            print("Abnormal ", session," ", video_ts," ", dsv['sent_ts'])
+            print(pt)
+            print(row)
+            print("\n\n\n")
     cnt = 0
+    print("Check FIN")
+    exit(0)
     f = open("logge400", "w")
 
     for row in video_acked_rows:
