@@ -197,6 +197,8 @@ class Model:
         for i in range(len(l2_abl_out)):
             ans = (l2_abl_out[i]-output_data[i])*(l2_abl_out[i]-output_data[i])
             loss2_shadow.append(ans)
+            if ans > 100:
+                print(">100 ", l2_abl_out[i]," ", output_data[i])
         for i in range(len(l2_abl_out)):
             if loss2[i] != loss2_shadow[i]:
                 print("Noequal ", loss2[i], " ", loss2_shadow[i])
