@@ -285,7 +285,7 @@ def main():
     end_dt = datetime.strptime(args.end_date,"%Y%m%d")
     day_num = (end_dt - start_dt).days+1
 
-    read_and_write_csv_proc, args=(0, args, start_dt, None )
+    read_and_write_csv_proc(0, args, start_dt, None )
 
     '''
     partition = int(day_num /4)
