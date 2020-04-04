@@ -172,7 +172,7 @@ class Model:
 
     # compute mean square error of the classifier based on its expected value of distribution
     # (input_data and output_data have been normalized)
-    def compute_mse(self, input_data, output_data):
+    def compute_mse(self, proc_id, input_data, output_data):
         result = {'bin':[], 'l1':[], 'l2':[] }
         input_data = np.asarray(input_data)
         output_data = np.asarray(output_data)
@@ -193,7 +193,7 @@ class Model:
         bacc = bin_acc(bin_abl_out, output_data)
         loss1 = l1_loss(l1_abl_out, output_data)
         loss2 = l2_loss(l2_abl_out, output_data)
-        with open("debug_l2", "w") as f1:
+        with open("debug_l2-"+str(proc_id), "w") as f1:
             f1.write(str(loss2.tolist()))
         print("sum ", np.sum(loss2), " size ", np.size(loss2))
         result['bin'] = np.sum(bacc)/np.size(bacc)
@@ -894,7 +894,7 @@ def get_mse(proc_id, args, raw_in, raw_out):
     sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
     input_data = model.normalize_input(raw_in, update_obs=False)
     output_data = raw_out
-    result = model.compute_mse(input_data, output_data)
+    result = model.compute_mse(proc_id, input_data, output_data)
     print("proc_id=",proc_id," ", result)
     return result
 
