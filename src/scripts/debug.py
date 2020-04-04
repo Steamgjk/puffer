@@ -37,7 +37,7 @@ def main():
 def get_transmission_time(video_send_file, video_acked_file):
     merge_dt = pd.read_csv( video_send_file,  
                             header=None, encoding="utf_8", engine='python' , 
-                            iterator = True, chunksize=10000 ) 
+                            iterator = True, chunksize=100000 ) 
     sent_info = {}
     row_cnt = 0
     for chunk in merge_dt:
@@ -49,12 +49,14 @@ def get_transmission_time(video_send_file, video_acked_file):
                 sent_info[session_id]={}
             sent_info[session_id][presentation_time] = sent_time 
         row_cnt += chunk.shape[0]
+        if row_cnt%100000 == 0:
+            print("sent file ", row_cnt)
 
     #print("sent info \n")
     #print(sent_info)
     merge_dt = pd.read_csv( video_acked_file,  
                             header=None, encoding="utf_8", engine='python' , 
-                            iterator = True, chunksize=10000 ) 
+                            iterator = True, chunksize=100000 ) 
     acked_info = {}
     row_cnt = 0
     for chunk in merge_dt:
@@ -67,6 +69,8 @@ def get_transmission_time(video_send_file, video_acked_file):
                 acked_info[session_id]={}
             acked_info[session_id][presentation_time] = acked_time 
         row_cnt += chunk.shape[0] 
+        if row_cnt%100000 == 0:
+            print("acked file ", row_cnt)
     
     #print("acked info \n", acked_info)
 
@@ -103,5 +107,11 @@ if __name__ == '__main__':
     ans = get_transmission_time(args.sent_file, args.acked_file)
     print("FINNNNNN\n\n\n")
     print(len(ans))
-    for itm in ans:
-        print(itm, ans[itm])
+    with open("131-ts", "w") as f:
+        for itm in ans:
+            #print("type ", type(ans[itm]))
+            for presentation in ans[itm]:
+                line = str(itm)+" "+ str(presentation) + " " +str(ans[itm][presentation])+"\n"
+                f.write(line)
+                if ans[itm][presentation][2]/1000 > 400:
+                    print(itm, ans[itm])

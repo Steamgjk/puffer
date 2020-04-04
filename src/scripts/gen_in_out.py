@@ -90,7 +90,8 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         dsv = d[session][video_ts]  # short name
         ## debug
         dsv['debug_session'] = session
-        dsv['sent_ts'] = np.datetime64(pt['timestamp'], 'ms')
+        #dsv['sent_ts'] = np.datetime64(pt['timestamp'], 'ms')
+        dsv['sent_ts'] = pt['timestamp']
         dsv['size'] = float(pt['chunk_size']) / PKT_BYTES  # bytes -> packets
         # byte/second -> packet/second
         dsv['delivery_rate'] = float(pt['delivery_rate']) / PKT_BYTES
@@ -99,7 +100,10 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         dsv['min_rtt'] = float(pt['min_rtt']) / MILLION  # us -> s
         dsv['rtt'] = float(pt['rtt']) / MILLION  # us -> s
         cnt += 1
+        if cnt % 100000==0:
+            print(" video_sent_rows cnt=",cnt)
     cnt = 0
+
     for row in video_acked_rows:
         pt = row_to_dict(row, VIDEO_ACKED_KEYS)
         expt_id = pt['experiment_id']
@@ -115,11 +119,17 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         dsv = d[session][video_ts]  # short name
         # calculate transmission time
         sent_ts = dsv['sent_ts']
-        acked_ts = np.datetime64(pt['timestamp'], 'ms')
+        #acked_ts = np.datetime64(pt['timestamp'], 'ms')
+        acked_ts =  pt['timestamp']
         dsv['acked_ts'] = acked_ts
-        dsv['trans_time'] = (acked_ts - sent_ts) / np.timedelta64(1, 's')
+        #dsv['trans_time'] = (acked_ts - sent_ts) / np.timedelta64(1, 's')
+        dsv['trans_time'] = (acked_ts - sent_ts) / 1000
+        f = open("logge400", "w")
         if dsv['trans_time'] > 400:
-            print(">400 ", dsv['debug_session'], " ", acked_ts, " ", sent_ts, " ", dsv)
+            line = str(dsv['debug_session'])+ " "+ str(video_ts)+" "+ str(acked_ts)+ " "+str(sent_ts)+ " "+ str(dsv)
+            f.write(line+"\n")
+            print(">400 ", dsv['debug_session'], " ", video_ts,  " ", acked_ts, " ", sent_ts, " ", dsv)
+
         cnt += 1
         if cnt % 100000==0:
             print(" video_acked_rows cnt=",cnt)
