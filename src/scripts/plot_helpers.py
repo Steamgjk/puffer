@@ -90,6 +90,8 @@ def distr_l2_pred(distr):
                 cnt += dis[i] * 0.25 * Model.BIN_SIZE
             else:
                 cnt += dis[i] * i * Model.BIN_SIZE
+        if np.sum(dis) > 2 or cnt > 15:
+            print("Exception ", dis, " ", cnt)
         ret.append(cnt)
 
     return ret

@@ -193,6 +193,8 @@ class Model:
         bacc = bin_acc(bin_abl_out, output_data)
         loss1 = l1_loss(l1_abl_out, output_data)
         loss2 = l2_loss(l2_abl_out, output_data)
+        with open("expected-"+str(proc_id), "w") as f1:
+            f1.write(str(l2_abl_out))
         with open("debug_l2-"+str(proc_id), "w") as f1:
             f1.write(str(loss2.tolist()))
         print("sum ", np.sum(loss2), " size ", np.size(loss2))
