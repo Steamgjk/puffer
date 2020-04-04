@@ -1027,7 +1027,7 @@ def main():
                                         args.time_start, args.time_end, args.cc)
             # collect input and output data from raw data
             raw_in_out = prepare_input_output(raw_data)
-        elif:
+        else:
             # continual learning
             raw_in_out = prepare_cl_data(args)
 
