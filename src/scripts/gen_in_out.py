@@ -130,7 +130,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         if sent_ts < 1500000000000:
             print("Abnormal2 ", session," ", video_ts," ", dsv['sent_ts'])
             print("\n\n\n")
-        print("Check FIN2")
+        
         #acked_ts = np.datetime64(pt['timestamp'], 'ms')
         acked_ts =  pt['timestamp']
         dsv['acked_ts'] = acked_ts
