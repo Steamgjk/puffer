@@ -1049,7 +1049,7 @@ def main():
         result = []
         pool = Pool(processes= Model.FUTURE_CHUNKS)
         for i in range(Model.FUTURE_CHUNKS):
-            result.append(pool.apply_async(get_mse, args=args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],) ))
+            result.append(pool.apply_async(get_mse, args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],) ))
         for res in result:
             res_item = res.get()
         pool.close()
