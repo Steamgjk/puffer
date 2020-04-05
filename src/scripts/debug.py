@@ -96,14 +96,32 @@ def get_transmission_time(video_send_file, video_acked_file):
         else:
             print(session, " not in sent info")
     return ans
+
+def calcluate_frequency(target_file):
+    res = []
+    with open(target_file, "r") as f:
+        for line in f:
+            res.extend(eval(line))
+    frequency = {}
+    for t in res:
+        binx = int(round(t))
+        if binx not in frequency:
+            frequency[binx]=0
+        frequency[binx] += 1
+    
+    return frequency, len(res)
 if __name__ == '__main__':
     #main()
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--sent-file', dest='sent_file',
                         help='sent file')
     parser.add_argument('--acked-file', dest='acked_file',
                         help='acked file')
+    parser.add_argument('--target-file', dest='target_file',
+                        help='target file')
     args = parser.parse_args()
+    '''
     ans = get_transmission_time(args.sent_file, args.acked_file)
     print("FINNNNNN\n\n\n")
     print(len(ans))
@@ -112,6 +130,11 @@ if __name__ == '__main__':
             #print("type ", type(ans[itm]))
             for presentation in ans[itm]:
                 line = str(itm)+" "+ str(presentation) + " " +str(ans[itm][presentation])+"\n"
-                f.write(line)
                 if ans[itm][presentation][2]/1000 > 15:
                     print(itm, ans[itm])
+                    f.write(line)
+    '''
+    arr, num = calcluate_frequency(args.target_file)
+    print("Total ", num)
+    for itm in arr:
+        print(itm, ": ",  arr[itm], "\n")
