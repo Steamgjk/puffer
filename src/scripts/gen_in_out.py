@@ -73,7 +73,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
     cnt = 0
     for row in video_sent_rows:
         pt = row_to_dict(row, VIDEO_SENT_KEYS)
-        session = str(pt["session_id"])
+        session = str(pt["session_id"])+ "|"+str(pt['channel_name'])+"|"+ str(pt['experiment_id'])
         # filter data points by congestion control
         if cc is not None and is_cc(pt["experiment_id"], cc):
             continue
@@ -89,7 +89,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         d[session][video_ts] = {}
         dsv = d[session][video_ts]  # short name
         ## debug
-        dsv['debug_session'] = session
+        #dsv['debug_session'] = session
         #dsv['sent_ts'] = np.datetime64(pt['timestamp'], 'ms')
         dsv['sent_ts'] = pt['timestamp']
         dsv['size'] = float(pt['chunk_size']) / PKT_BYTES  # bytes -> packets
@@ -102,20 +102,16 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         cnt += 1
         if cnt % 100000==0:
             print(" video_sent_rows cnt=",cnt)
-        if dsv['sent_ts'] < 1500000000000:
-            print("Abnormal ", session," ", video_ts," ", dsv['sent_ts'])
-            print(pt)
-            print(row)
-            print("\n\n\n")
+
     cnt = 0
-    print("Check FIN")
+
 
     f = open("logge400", "w")
 
     for row in video_acked_rows:
         pt = row_to_dict(row, VIDEO_ACKED_KEYS)
         expt_id = pt['experiment_id']
-        session = str(pt["session_id"])
+        session = str(pt["session_id"])+ "|"+str(pt['channel_name'])+"|"+ str(pt['experiment_id'])
         # filter data points by congestion control
         if cc is not None and is_cc(expt_id, cc):
             continue
@@ -127,21 +123,17 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         dsv = d[session][video_ts]  # short name
         # calculate transmission time
         sent_ts = dsv['sent_ts']
-        if sent_ts < 1500000000000:
-            print("Abnormal2 ", session," ", video_ts," ", dsv['sent_ts'])
-            print("\n\n\n")
-        
         #acked_ts = np.datetime64(pt['timestamp'], 'ms')
         acked_ts =  pt['timestamp']
         dsv['acked_ts'] = acked_ts
         #dsv['trans_time'] = (acked_ts - sent_ts) / np.timedelta64(1, 's')
         dsv['trans_time'] = (acked_ts - sent_ts) / 1000
-        '''
+        
         if dsv['trans_time'] > 400:
-            line = str(dsv['debug_session'])+ " "+ str(video_ts)+" "+ str(acked_ts)+ " "+str(sent_ts)+ " "+ str(dsv)
+            line = " "+ str(video_ts)+" "+ str(acked_ts)+ " "+str(sent_ts)+ " "+ str(dsv)
             f.write(line+"\n")
-            print(">400 ", dsv['debug_session'], " ", video_ts,  " ", acked_ts, " ", sent_ts, " ", dsv)
-        '''
+            print(">400 "," ", video_ts,  " ", acked_ts, " ", sent_ts, " ", dsv)
+        print("CheckFIN")
         cnt += 1
         if cnt % 100000==0:
             print(" video_acked_rows cnt=",cnt)
@@ -183,7 +175,7 @@ def read_and_write_csv_proc(proc_id, args, date_item, sample_size):
                 leng += len(arr)
             print("leng " , leng)
         '''
-        '''
+        
         in_file_obj = open(in_file_name, "w+")
         raw_in_items = raw_in_out[i]['in']
         raw_out_items = raw_in_out[i]['out']
@@ -201,7 +193,7 @@ def read_and_write_csv_proc(proc_id, args, date_item, sample_size):
             idx += 10000
             
         out_file_obj.close()
-        '''
+        
         print("FIN: ", out_file_name)
 
     del raw_in_out
