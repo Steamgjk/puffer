@@ -113,5 +113,5 @@ if __name__ == '__main__':
             for presentation in ans[itm]:
                 line = str(itm)+" "+ str(presentation) + " " +str(ans[itm][presentation])+"\n"
                 f.write(line)
-                if ans[itm][presentation][2]/1000 > 400:
+                if ans[itm][presentation][2]/1000 > 15:
                     print(itm, ans[itm])

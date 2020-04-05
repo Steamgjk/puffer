@@ -1046,12 +1046,14 @@ def main():
     # train or test FUTURE_CHUNKS models
     proc_list = []
     if args.compute_mse:
+        result = []
+        pool = Pool(processes= Model.FUTURE_CHUNKS)
         for i in range(Model.FUTURE_CHUNKS):
-            proc = Process(target=get_mse,
-                        args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],))
-            proc_list.append(proc)
-        for proc in proc_list:
-            proc.start()
+            result.append(pool.apply_async(get_mse, args=args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],) ))
+        for res in result:
+            res_item = res.get()
+        pool.close()
+        pool.join()
     else:
         for i in range(Model.FUTURE_CHUNKS):
             proc = Process(target=train_or_eval_model,
@@ -1059,10 +1061,9 @@ def main():
             proc_list.append(proc)
         for proc in proc_list:
             proc.start()
-
-    # wait for all processes to finish
-    for proc in proc_list:
-        proc.join()
+        # wait for all processes to finish
+        for proc in proc_list:
+            proc.join()
 
 
 if __name__ == '__main__':
