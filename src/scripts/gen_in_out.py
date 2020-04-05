@@ -298,9 +298,9 @@ def main():
     end_dt = datetime.strptime(args.end_date,"%Y%m%d")
     day_num = (end_dt - start_dt).days+1
 
-    read_and_write_csv_proc(0, args, start_dt, None )
+    #read_and_write_csv_proc(0, args, start_dt, None )
 
-    '''
+    
     partition = int(day_num /4)
     start_idx = 0
     end_idx = start_idx + partition
@@ -325,7 +325,7 @@ def main():
         pool.join()
         start_idx += partition
         end_idx = start_idx+ partition
-    '''
+    
         
 
 if __name__ == '__main__':
