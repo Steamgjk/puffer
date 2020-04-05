@@ -133,7 +133,6 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
             line = " "+ str(video_ts)+" "+ str(acked_ts)+ " "+str(sent_ts)+ " "+ str(dsv)
             f.write(line+"\n")
             print(">400 "," ", video_ts,  " ", acked_ts, " ", sent_ts, " ", dsv)
-        print("CheckFIN")
         cnt += 1
         if cnt % 100000==0:
             print(" video_acked_rows cnt=",cnt)
