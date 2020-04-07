@@ -27,6 +27,7 @@ FILE_SUFFIX = 'T11.csv'
 PKT_BYTES = 1500
 OUTPUT_STATS="output_stats"
 def calc_throughput(folder_name, start_date):
+    print("Geting ", folder_name, " start_date=",start_date)
     url_str = "https://storage.googleapis.com/puffer-stanford-data/"+folder_name+".tar.gz"
     cmd = "wget "+ url_str+" --no-check-certificate"
     cmd = shlex.split(cmd)
