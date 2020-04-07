@@ -91,8 +91,9 @@ def calc_throughput(folder_name, start_date):
 
 def main():
     cmd = "mkdir "+OUTPUT_STATS
-    cmd = shlex.split(cmd)
-    subprocess.call(cmd, shell=False)
+    if path.exists(OUTPUT_STATS) is not True:
+        cmd = shlex.split(cmd)
+        subprocess.call(cmd, shell=False)
     folder = "puffer-fake-sample"
     '''
     for i in range(1,13):
