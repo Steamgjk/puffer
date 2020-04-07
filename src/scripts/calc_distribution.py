@@ -108,7 +108,8 @@ def calc_throughput(folder_name, start_date):
        
 
 
-def main():
+
+if __name__ == '__main__':
     '''
     cmd = "mkdir "+OUTPUT_STATS
     if path.exists(OUTPUT_STATS) is not True:
@@ -143,7 +144,3 @@ def main():
     #folder_name = "puffer-fake-sample"
     calc_throughput(folder_name, start_dt)
     
-    return
-
-if __name__ == '__main__':
-    main()
