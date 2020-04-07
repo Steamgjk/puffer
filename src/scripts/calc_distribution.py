@@ -144,7 +144,7 @@ if __name__ == '__main__':
     #folder_name = "puffer-fake-sample"
     #calc_throughput(folder_name, start_dt)
 
-'''
+    '''
     print("Geting ", folder_name, " start_date=",start_date)
     url_str = "https://storage.googleapis.com/puffer-stanford-data/"+folder_name+".tar.gz"
     cmd = "wget "+ url_str+" --no-check-certificate"
@@ -159,7 +159,6 @@ if __name__ == '__main__':
     throughput_hist = {}
     min_throuput = sys.maxsize
     max_throughput = 0
-    
     sorted_hist = {}
     result = [] 
     for j in range(4):   
