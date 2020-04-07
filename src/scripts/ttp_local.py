@@ -483,7 +483,7 @@ def read_csv_to_rows(data_file):
         for index, row in chunk.iterrows():              
             rows.append(row)
         row_cnt += chunk.shape[0]
-        print(data_file +' row_cnt=', row_cnt)
+        #print(data_file +' row_cnt=', row_cnt)
         # for test
         if DEBUG and row_cnt >= 10000:
             break
@@ -527,9 +527,9 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         dsv['min_rtt'] = float(pt['min_rtt']) / MILLION  # us -> s
         dsv['rtt'] = float(pt['rtt']) / MILLION  # us -> s
         cnt += 1
-        if cnt % 100000==0:
-            print("video_sent_rows cnt=",cnt)
-    print("Middle... FIN ")
+        #if cnt % 100000==0:
+        #    print("video_sent_rows cnt=",cnt)
+    #print("Middle... FIN ")
     cnt = 0
     for row in video_acked_rows:
         pt = row_to_dict(row, VIDEO_ACKED_KEYS)
@@ -550,8 +550,8 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         dsv['acked_ts'] = acked_ts
         dsv['trans_time'] = (acked_ts - sent_ts) / np.timedelta64(1, 's')
         cnt += 1
-        if cnt % 100000==0:
-            print(" video_acked_rows cnt=",cnt)
+        #if cnt % 100000==0:
+        #    print(" video_acked_rows cnt=",cnt)
 
     return d
 

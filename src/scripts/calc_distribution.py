@@ -42,8 +42,9 @@ def calc_throughput_sub(video_sent_file_name, video_acked_file_name):
                     transmission_time  = raw_data[session][chunk]['trans_time']
                     chunk_size = raw_data[session][chunk]['size']
                     throughput = chunk_size*1.0/transmission_time  # packets/seconds
-                    if throughput>1000000:
+                    if throughput>1000000 or throughput < 0:
                         print("transmission_time=",transmission_time, " chunk_size=", chunk_size)
+                        exit(0)
                     throughput = int(round(throughput))
                     if throughput not in throughput_hist:
                         throughput_hist[throughput] = 0
