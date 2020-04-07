@@ -8,7 +8,7 @@ import torch
 from os import path
 from datetime import datetime, timedelta
 import numpy as np
-from multiprocessing import Process
+from multiprocessing import Process, Array, Pool
 import subprocess
 import shlex
 import matplotlib
