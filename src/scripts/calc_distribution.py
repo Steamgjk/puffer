@@ -53,7 +53,7 @@ def func(video_sent_file_name, video_acked_file_name):
     return video_sent_file_name, video_acked_file_name
 
 def calc_throughput(folder_name, start_date):
-    
+    '''
     print("Geting ", folder_name, " start_date=",start_date)
     url_str = "https://storage.googleapis.com/puffer-stanford-data/"+folder_name+".tar.gz"
     cmd = "wget "+ url_str+" --no-check-certificate"
@@ -64,15 +64,19 @@ def calc_throughput(folder_name, start_date):
     cmd = shlex.split(cmd)
     subprocess.call(cmd, shell=False)
     print("FIN tar")
-    
+    '''
+    cmd = "rm -rf " + folder_name+".tar.gz"
+    cmd = shlex.split(cmd)
+    subprocess.call(cmd, shell=False)
+    print("FIN rm tar.gz " + folder_name)
+
     throughput_hist = {}
     min_throuput = sys.maxsize
     max_throughput = 0
-    
     sorted_hist = {}
-    result = [] 
     for j in range(4):   
         pool = Pool(processes= 8)
+        result = [] 
         for i in range(8*j, 8*j+8):
             date_item = start_date + timedelta(days=i)
             video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
@@ -81,7 +85,6 @@ def calc_throughput(folder_name, start_date):
         
         for res in result:
             hist = res.get() 
-            '''
             for throughput in hist:
                 if min_throuput > throughput:
                     min_throuput = throughput
@@ -90,7 +93,6 @@ def calc_throughput(folder_name, start_date):
                 if throughput not in sorted_hist:
                     throughput_hist[throughput] = 0
                 throughput_hist[throughput] += hist[throughput]
-            '''
     
     for i in range(min_throuput, max_throughput+1):
         if  i in throughput_hist:
@@ -98,10 +100,7 @@ def calc_throughput(folder_name, start_date):
     print(sorted_hist)
     print("FIN Calc")
 
-    cmd = "rm -rf " + folder_name+".tar.gz"
-    cmd = shlex.split(cmd)
-    subprocess.call(cmd, shell=False)
-    print("FIN rm tar.gz " + folder_name)
+    
     cmd = "rm -rf " + folder_name
     cmd = shlex.split(cmd)
     subprocess.call(cmd, shell=False)
@@ -144,8 +143,8 @@ if __name__ == '__main__':
         print(start_dt)
         calc_throughput(folder_name, start_dt)    
     '''
-    #start_date = datetime(year = 2020, month=1, day = 1)
-    #folder_name = "puffer-"+"2020"+ str(1).zfill(2)
-    start_date = datetime(year = 2020, month=2, day = 1)
-    folder_name = "puffer-fake-sample"
+    start_date = datetime(year = 2020, month=1, day = 1)
+    folder_name = "puffer-"+"2020"+ str(1).zfill(2)
+    #start_date = datetime(year = 2020, month=2, day = 1)
+    #folder_name = "puffer-fake-sample"
     calc_throughput(folder_name, start_date)
