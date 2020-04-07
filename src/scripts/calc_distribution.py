@@ -94,13 +94,14 @@ def main():
     cmd = shlex.split(cmd)
     subprocess.call(cmd, shell=False)
     folder = "puffer-fake-sample"
-    
+    '''
     for i in range(1,13):
         start_dt = datetime(year = 2019, month=i, day = 1)
         folder_name = "puffer-"+"2019"+ str(i).zfill(2)
         print(folder_name)
         print(start_dt)
         calc_throughput(folder, start_dt)
+    '''
     start_dt = datetime(year = 2020, month=1, day = 1)
     folder_name = "puffer-"+"2020"+ str(1).zfill(2)
     calc_throughput(folder, start_dt)
