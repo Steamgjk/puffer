@@ -98,19 +98,34 @@ def main():
     if path.exists(OUTPUT_STATS) is not True:
         cmd = shlex.split(cmd)
         subprocess.call(cmd, shell=False)
+    
+    '''
+    pool = Pool(processes= 12)
+    result = []    
+    for i in range(1,13):
+        start_dt = datetime(year = 2019, month=i, day = 1)
+        folder_name = "puffer-"+"2019"+ str(i).zfill(2)
+        print(folder_name)
+        print(start_dt)
+        result.append(pool.apply_async(calc_throughput, args=(folder_name, start_dt)))
+    for res in result:
+        res_item = res.get()
+    pool.close()
+    pool.join()
     '''
     for i in range(1,13):
         start_dt = datetime(year = 2019, month=i, day = 1)
         folder_name = "puffer-"+"2019"+ str(i).zfill(2)
         print(folder_name)
         print(start_dt)
-        calc_throughput(folder, start_dt)
+        calc_throughput(folder_name, start_dt)    
     '''
     start_dt = datetime(year = 2020, month=1, day = 1)
     folder_name = "puffer-"+"2020"+ str(1).zfill(2)
     #start_dt = datetime(year = 2020, month=2, day = 1)
     #folder_name = "puffer-fake-sample"
     calc_throughput(folder_name, start_dt)
+    '''
     return
 
 if __name__ == '__main__':
