@@ -77,7 +77,7 @@ def calc_throughput(folder_name, start_date):
             date_item = start_date + timedelta(days=i)
             video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
             video_acked_file_name = folder_name+"/"+ VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-            result.append(pool.apply_async(func, args=(video_sent_file_name, video_acked_file_name)))
+            result.append(pool.apply_async(calc_throughput_sub, args=(video_sent_file_name, video_acked_file_name)))
         
         for res in result:
             hist = res.get() 
@@ -149,15 +149,3 @@ if __name__ == '__main__':
     start_date = datetime(year = 2020, month=2, day = 1)
     folder_name = "puffer-fake-sample"
     calc_throughput(folder_name, start_date)
-    '''
-    for j in range(4):   
-        result = [] 
-        pool = Pool(processes= 8)
-        for i in range(8*j, 8*j+8):
-            date_item = start_date + timedelta(days=i)
-            video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-            video_acked_file_name = folder_name+"/"+ VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-            result.append(pool.apply_async(func, args=(video_sent_file_name, video_acked_file_name)))
-        for res in result:
-            hist = res.get() 
-    '''
