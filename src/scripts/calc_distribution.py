@@ -168,7 +168,9 @@ if __name__ == '__main__':
             date_item = start_date + timedelta(days=i)
             video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
             video_acked_file_name = folder_name+"/"+ VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-            result.append(pool.apply_async(calc_throughput, args=(video_sent_file_name, video_acked_file_name)))
+            result.append(pool.apply_async(calc_throughput, args=(video_sent_file_name, video_acked_file_name,)))
+        pool.close()
+        pool.join()
         for res in result:
             hist = res.get() 
             for throughput in hist:
