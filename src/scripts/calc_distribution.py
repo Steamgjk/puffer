@@ -109,11 +109,12 @@ def calc_throughput(folder_name, start_date):
 
 
 def main():
+    '''
     cmd = "mkdir "+OUTPUT_STATS
     if path.exists(OUTPUT_STATS) is not True:
         cmd = shlex.split(cmd)
         subprocess.call(cmd, shell=False)
-    
+    '''
     '''
     pool = Pool(processes= 12)
     result = []    
