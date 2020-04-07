@@ -50,6 +50,7 @@ def calc_throughput_sub(video_sent_file_name, video_acked_file_name):
     return  throughput_hist
 
 def calc_throughput(folder_name, start_date):
+    '''
     print("Geting ", folder_name, " start_date=",start_date)
     url_str = "https://storage.googleapis.com/puffer-stanford-data/"+folder_name+".tar.gz"
     cmd = "wget "+ url_str+" --no-check-certificate"
@@ -60,6 +61,7 @@ def calc_throughput(folder_name, start_date):
     cmd = shlex.split(cmd)
     subprocess.call(cmd, shell=False)
     print("FIN tar")
+    '''
     throughput_hist = {}
     min_throuput = sys.maxsize
     max_throughput = 0
