@@ -148,7 +148,7 @@ if __name__ == '__main__':
     #folder_name = "puffer-"+"2020"+ str(1).zfill(2)
     start_date = datetime(year = 2020, month=2, day = 1)
     folder_name = "puffer-fake-sample"
-    calc_throughput(folder_name, start_dt)
+    calc_throughput(folder_name, start_date)
     '''
     for j in range(4):   
         result = [] 
