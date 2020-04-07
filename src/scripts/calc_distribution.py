@@ -94,7 +94,6 @@ def main():
     if path.exists(OUTPUT_STATS) is not True:
         cmd = shlex.split(cmd)
         subprocess.call(cmd, shell=False)
-    folder = "puffer-fake-sample"
     '''
     for i in range(1,13):
         start_dt = datetime(year = 2019, month=i, day = 1)
@@ -105,7 +104,7 @@ def main():
     '''
     start_dt = datetime(year = 2020, month=1, day = 1)
     folder_name = "puffer-"+"2020"+ str(1).zfill(2)
-    calc_throughput(folder, start_dt)
+    calc_throughput(folder_name, start_dt)
     return
 
 if __name__ == '__main__':
