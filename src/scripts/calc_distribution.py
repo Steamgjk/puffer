@@ -65,10 +65,11 @@ def calc_throughput(folder_name, start_date):
     throughput_hist = {}
     min_throuput = sys.maxsize
     max_throughput = 0
-    pool = Pool(processes= 8)
+    
     sorted_hist = {}
     result = [] 
     for j in range(4):   
+        pool = Pool(processes= 8)
         for i in range(8*j, 8*j+8):
             date_item = start_date + timedelta(days=i)
             video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
