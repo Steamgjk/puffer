@@ -49,6 +49,9 @@ def calc_throughput_sub(video_sent_file_name, video_acked_file_name):
                     throughput_hist[throughput] += 1
     return  throughput_hist
 
+def func(video_sent_file_name, video_acked_file_name):
+    return video_sent_file_name, video_acked_file_name
+
 def calc_throughput(folder_name, start_date):
     
     print("Geting ", folder_name, " start_date=",start_date)
@@ -143,3 +146,14 @@ if __name__ == '__main__':
     #start_dt = datetime(year = 2020, month=2, day = 1)
     #folder_name = "puffer-fake-sample"
     #calc_throughput(folder_name, start_dt)
+    
+    for j in range(4):   
+        result = [] 
+        pool = Pool(processes= 8)
+        for i in range(8*j, 8*j+8):
+            date_item = start_date + timedelta(days=i)
+            video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
+            video_acked_file_name = folder_name+"/"+ VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
+            result.append(pool.apply_async(func, args=(video_sent_file_name, video_acked_file_name)))
+        for res in result:
+            hist = res.get() 
