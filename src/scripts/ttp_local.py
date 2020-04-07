@@ -503,7 +503,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
     cnt = 0
     for row in video_sent_rows:
         pt = row_to_dict(row, VIDEO_SENT_KEYS)
-        session = str(pt["session_id"])
+        session = str(pt["session_id"])+ "|"+str(pt['channel_name'])+"|"+ str(pt['experiment_id'])
         # filter data points by congestion control
         if cc is not None and is_cc(pt["experiment_id"], cc):
             continue
@@ -534,7 +534,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
     for row in video_acked_rows:
         pt = row_to_dict(row, VIDEO_ACKED_KEYS)
         expt_id = pt['experiment_id']
-        session = str(pt["session_id"])
+        session = str(pt["session_id"])+ "|"+str(pt['channel_name'])+"|"+ str(pt['experiment_id'])
         # filter data points by congestion control
         if cc is not None and is_cc(expt_id, cc):
             continue
