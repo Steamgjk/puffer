@@ -160,24 +160,25 @@ if __name__ == '__main__':
     min_throuput = sys.maxsize
     max_throughput = 0
     sorted_hist = {}
-    result = [] 
+    
     for j in range(4):   
+        result = [] 
         pool = Pool(processes= 8)
         for i in range(8*j, 8*j+8):
             date_item = start_date + timedelta(days=i)
             video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
             video_acked_file_name = folder_name+"/"+ VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
             result.append(pool.apply_async(calc_throughput, args=(video_sent_file_name, video_acked_file_name)))
-            for res in result:
-                hist = res.get() 
-                for throughput in hist:
-                    if min_throuput > throughput:
-                        min_throuput = throughput
-                    if max_throughput < throughput:
-                        max_throughput = throughput
-                    if throughput not in sorted_hist:
-                        throughput_hist[throughput] = 0
-                    throughput_hist[throughput] += hist[throughput]
+        for res in result:
+            hist = res.get() 
+            for throughput in hist:
+                if min_throuput > throughput:
+                    min_throuput = throughput
+                if max_throughput < throughput:
+                    max_throughput = throughput
+                if throughput not in sorted_hist:
+                    throughput_hist[throughput] = 0
+                throughput_hist[throughput] += hist[throughput]
     
     for i in range(min_throuput, max_throughput+1):
         if  i in throughput_hist:
