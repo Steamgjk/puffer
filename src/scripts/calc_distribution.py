@@ -14,6 +14,7 @@ import shlex
 import matplotlib
 import matplotlib.pyplot as plt
 import gc
+import json
 from ttp_local import(
     read_csv_to_rows,
     process_raw_csv_data
@@ -84,7 +85,9 @@ def calc_throughput(folder_name, start_date):
     cmd = shlex.split(cmd)
     subprocess.call(cmd, shell=False)
     print("FIN rm folder " + folder_name)
-    #with open("")
+    jsObj = json.dumps(sorted_hist)  
+    with open( OUTPUT_STATS +"/"+ folder_name+".stat", "w") as f:
+        f.write(jsObj)
     return sorted_hist
     
        
@@ -105,6 +108,8 @@ def main():
     '''
     start_dt = datetime(year = 2020, month=1, day = 1)
     folder_name = "puffer-"+"2020"+ str(1).zfill(2)
+    #start_dt = datetime(year = 2020, month=2, day = 1)
+    #folder_name = "puffer-fake-sample"
     calc_throughput(folder_name, start_dt)
     return
 
