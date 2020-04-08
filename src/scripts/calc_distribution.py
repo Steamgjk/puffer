@@ -119,7 +119,10 @@ def calc_throughput(folder_name, start_date):
 
 
 if __name__ == '__main__':
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sta', dest='sta', type=int)  
+    parser.add_argument('--end', dest='end', type=int)  
+    args = parser.parse_args()
     cmd = "mkdir "+OUTPUT_STATS
     if path.exists(OUTPUT_STATS) is not True:
         cmd = shlex.split(cmd)
@@ -140,7 +143,7 @@ if __name__ == '__main__':
     pool.join()
     '''
 
-    for i in range(1,13):
+    for i in range(args.sta,args.end):
         start_dt = datetime(year = 2019, month=i, day = 1)
         folder_name = "puffer-"+"2019"+ str(i).zfill(2)
         print(folder_name)
