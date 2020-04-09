@@ -158,6 +158,7 @@ if __name__ == '__main__':
 
 
     folder_name = "puffer-"+"201906"
+    start_date = datetime(year = 2019, month=6, day = 1)
     throughput_hist = {}
     min_throuput = sys.maxsize
     max_throughput = 0
