@@ -169,8 +169,6 @@ if __name__ == '__main__':
             video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
             video_acked_file_name = folder_name+"/"+ VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
             hist = calc_throughput_sub(video_sent_file_name, video_acked_file_name)
-    
-            hist = res.get() 
             for throughput in hist:
                 if min_throuput > throughput:
                     min_throuput = throughput
