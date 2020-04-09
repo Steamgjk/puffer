@@ -173,6 +173,9 @@ if __name__ == '__main__':
     for j in range(4):   
         for i in range(8*j, 8*j+8):
             date_item = start_date + timedelta(days=i)
+            if date_item.strftime('%Y-%m-%d') == '2019-06-02':
+                #null file, skip
+                continue
             video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
             video_acked_file_name = folder_name+"/"+ VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
             hist = calc_throughput_sub(video_sent_file_name, video_acked_file_name)
