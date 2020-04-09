@@ -126,30 +126,16 @@ def calc_throughput(folder_name, start_date):
 
 
 if __name__ == '__main__':
+        
     parser = argparse.ArgumentParser()
     parser.add_argument('--sta', dest='sta', type=int)  
     parser.add_argument('--end', dest='end', type=int)  
+    '''
     args = parser.parse_args()
     cmd = "mkdir "+OUTPUT_STATS
     if path.exists(OUTPUT_STATS) is not True:
         cmd = shlex.split(cmd)
         subprocess.call(cmd, shell=False)
-
-    '''
-    pool = Pool(processes= 12)
-    result = []    
-    for i in range(1,13):
-        start_dt = datetime(year = 2019, month=i, day = 1)
-        folder_name = "puffer-"+"2019"+ str(i).zfill(2)
-        print(folder_name)
-        print(start_dt)
-        result.append(pool.apply_async(calc_throughput, args=(folder_name, start_dt)))
-    for res in result:
-        res_item = res.get()
-    pool.close()
-    pool.join()
-    '''
-    '''
     for i in range(args.sta,args.end):
         start_dt = datetime(year = 2019, month=i, day = 1)
         folder_name = "puffer-"+"2019"+ str(i).zfill(2)
@@ -163,42 +149,18 @@ if __name__ == '__main__':
     #folder_name = "puffer-fake-sample"
     #calc_throughput(folder_name, start_date)
 
+    for i in range(args.sta,args.end):
+        start_dt = datetime(year = 2019, month=i, day = 1)
+        folder_name = 
+        file_name = OUTPUT_STATS+"/"+"puffer-"+"2019"+ str(i).zfill(2)+".stat"
+        f = open(file_name, "r")
+        jsonObj = json.load(f)
+        print(type(jsonObj))
+        for key in jsonObj:
+            print(key, " ", jsonObj[key])
 
-    folder_name = "puffer-"+"201906"
-    start_date = datetime(year = 2019, month=6, day = 1)
-    throughput_hist = {}
-    min_throuput = sys.maxsize
-    max_throughput = 0
-    sorted_hist = {}
-    for j in range(4):   
-        for i in range(8*j, 8*j+8):
-            date_item = start_date + timedelta(days=i)
-            if date_item.strftime('%Y-%m-%d') == '2019-06-02':
-                #null file, skip
-                continue
-            video_sent_file_name = folder_name+"/"+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-            video_acked_file_name = folder_name+"/"+ VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-            hist = calc_throughput_sub(video_sent_file_name, video_acked_file_name)
-            for throughput in hist:
-                if min_throuput > throughput:
-                    min_throuput = throughput
-                if max_throughput < throughput:
-                    max_throughput = throughput
-                if throughput not in sorted_hist:
-                    throughput_hist[throughput] = 0
-                throughput_hist[throughput] += hist[throughput]
-    
-    for i in range(min_throuput, max_throughput+1):
-        if  i in throughput_hist:
-            sorted_hist[i] = throughput_hist[i]
-    print(sorted_hist)
-    print("FIN Calc")
 
-    
-    cmd = "rm -rf " + folder_name
-    cmd = shlex.split(cmd)
-    subprocess.call(cmd, shell=False)
-    print("FIN rm folder " + folder_name)
-    jsObj = json.dumps(sorted_hist)  
-    with open( OUTPUT_STATS +"/"+ folder_name+".stat", "w") as f:
-        f.write(jsObj)
+
+
+
+
