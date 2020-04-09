@@ -150,8 +150,6 @@ if __name__ == '__main__':
     #calc_throughput(folder_name, start_date)
 
     for i in range(args.sta,args.end):
-        start_dt = datetime(year = 2019, month=i, day = 1)
-        folder_name = 
         file_name = OUTPUT_STATS+"/"+"puffer-"+"2019"+ str(i).zfill(2)+".stat"
         f = open(file_name, "r")
         jsonObj = json.load(f)
