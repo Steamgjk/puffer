@@ -29,7 +29,9 @@ OUTPUT_STATS="output_stats"
 def calc_throughput_sub(video_sent_file_name, video_acked_file_name):
     throughput_hist = {}
     if path.exists(video_sent_file_name) and path.exists(video_acked_file_name):
+        print("reading..", video_sent_file_name)
         video_sent_rows = read_csv_to_rows(video_sent_file_name)
+        print("reading..", video_acked_file_name)
         video_acked_rows = read_csv_to_rows(video_acked_file_name)
         print(video_sent_file_name," ", video_acked_file_name, "len ", len(video_sent_rows), " ", len(video_acked_rows))
         raw_data = process_raw_csv_data(video_sent_rows, video_acked_rows, None)
