@@ -529,7 +529,7 @@ def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
         cnt += 1
         if cnt % 500000==0:
             print("video_sent_rows cnt=",cnt)
-    #print("Middle... FIN ")
+    print("Middle... FIN ")
     cnt = 0
     for row in video_acked_rows:
         pt = row_to_dict(row, VIDEO_ACKED_KEYS)
