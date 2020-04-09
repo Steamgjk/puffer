@@ -193,4 +193,3 @@ if __name__ == '__main__':
     jsObj = json.dumps(sorted_hist)  
     with open( OUTPUT_STATS +"/"+ folder_name+".stat", "w") as f:
         f.write(jsObj)
-    return sorted_hist
