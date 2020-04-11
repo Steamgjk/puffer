@@ -951,7 +951,8 @@ def calc_sample_sizes(args, start_dt, end_dt, max_samples):
     total_line_num = 0
     for i in range(day_num):
         date_item = start_dt + timedelta(days=i)
-        out_file_name = args.output_path+"/"+datetime.strptime(args.start_date,"%Y-%m-%d")+"-1.out"
+        out_file_name = (args.output_path+"/"+date_item.year+"-"
+                        +str(date_item.month).zfill(2)+"-"+str(date_item.day).zfill(2) +"-1.out")
         f = open(out_file_name)
         for index, line in enumerate(f):
             line_nums[i] += 1
