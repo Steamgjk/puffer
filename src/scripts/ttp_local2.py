@@ -1021,7 +1021,7 @@ def main():
             print("sample_data_sizes ", sample_data_sizes)
             for i in range(day_num):
                 date_item = start_dt + timedelta(days=i)
-                result.append(pool.apply_async(read_raw_data, args=(i, args, date_item, sample_data_sizes[i] ))
+                result.append(pool.apply_async(read_raw_data, args=(i, args, date_item, sample_data_sizes[i]) ))
             print("FIN Proce")
             for res in result:
                 res_item = res.get()
