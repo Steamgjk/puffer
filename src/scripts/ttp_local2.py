@@ -944,7 +944,7 @@ def read_csv_proc(proc_id, args, date_item, sample_size):
 
     return raw_in_out
 
-def calc_sample_sizes(start_dt, end_dt, max_samples):
+def calc_sample_sizes(args, start_dt, end_dt, max_samples):
     day_num = (end_dt - start_dt).days+1
     sample_data_sizes = [None for i in range(day_num)]
     line_nums = [0 for i in range(day_num)]
@@ -1017,7 +1017,7 @@ def main():
             pool = Pool(processes= 7)
             result = []    
             if args.use_sample:
-                sample_data_sizes = calc_sample_sizes(start_dt, end_dt, args.max_samples)
+                sample_data_sizes = calc_sample_sizes(args, start_dt, end_dt, args.max_samples)
             print("sample_data_sizes ", sample_data_sizes)
             for i in range(day_num):
                 date_item = start_dt + timedelta(days=i)
