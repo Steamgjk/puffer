@@ -300,7 +300,7 @@ def main():
 
     #read_and_write_csv_proc(0, args, start_dt, None )
 
-    
+
     partition = int(day_num /4)
     start_idx = 0
     end_idx = start_idx + partition

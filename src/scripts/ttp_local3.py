@@ -351,350 +351,6 @@ def check_args(args):
         CL_DISCOUNT = args.discount
 
 
-def calculate_trans_times(video_sent_results, video_acked_results,
-                          cc, postgres_cursor):
-    d = {}
-    last_video_ts = {}
-
-    for pt in video_sent_results['video_sent']:
-        expt_id = get_expt_id(pt)
-        session = (get_user(pt), int(pt['init_id']),
-                   pt['channel'], expt_id)
-
-        # filter data points by congestion control
-        expt_config = retrieve_expt_config(expt_id, expt_id_cache,
-                                           postgres_cursor)
-        if cc is not None and expt_config['cc'] != cc:
-            continue
-
-        if session not in d:
-            d[session] = {}
-            last_video_ts[session] = None
-
-        video_ts = int(pt['video_ts'])
-
-        if last_video_ts[session] is not None:
-            if video_ts != last_video_ts[session] + VIDEO_DURATION:
-                continue
-
-        last_video_ts[session] = video_ts
-
-        d[session][video_ts] = {}
-        dsv = d[session][video_ts]  # short name
-
-        dsv['sent_ts'] = np.datetime64(pt['time'])
-        dsv['size'] = float(pt['size']) / PKT_BYTES  # bytes -> packets
-        # byte/second -> packet/second
-        dsv['delivery_rate'] = float(pt['delivery_rate']) / PKT_BYTES
-        dsv['cwnd'] = float(pt['cwnd'])
-        dsv['in_flight'] = float(pt['in_flight'])
-        dsv['min_rtt'] = float(pt['min_rtt']) / MILLION  # us -> s
-        dsv['rtt'] = float(pt['rtt']) / MILLION  # us -> s
-
-    for pt in video_acked_results['video_acked']:
-        expt_id = get_expt_id(pt)
-        session = (get_user(pt), int(pt['init_id']),
-                   pt['channel'], expt_id)
-
-        # filter data points by congestion control
-        expt_config = retrieve_expt_config(expt_id, expt_id_cache,
-                                           postgres_cursor)
-        if cc is not None and expt_config['cc'] != cc:
-            continue
-
-        if session not in d:
-            continue
-
-        video_ts = int(pt['video_ts'])
-        if video_ts not in d[session]:
-            continue
-
-        dsv = d[session][video_ts]  # short name
-
-        # calculate transmission time
-        sent_ts = dsv['sent_ts']
-        acked_ts = np.datetime64(pt['time'])
-        dsv['acked_ts'] = acked_ts
-        dsv['trans_time'] = (acked_ts - sent_ts) / np.timedelta64(1, 's')
-
-    return d
-
-
-def prepare_raw_data(yaml_settings_path, time_start, time_end, cc):
-    with open(yaml_settings_path, 'r') as fh:
-        yaml_settings = yaml.safe_load(fh)
-
-    # construct time clause after 'WHERE'
-    time_clause = create_time_clause(time_start, time_end)
-
-    # create a client connected to InfluxDB
-    influx_client = connect_to_influxdb(yaml_settings)
-
-    # perform queries in InfluxDB
-    video_sent_query = 'SELECT * FROM video_sent'
-    if time_clause is not None:
-        video_sent_query += ' WHERE ' + time_clause
-    video_sent_results = influx_client.query(video_sent_query)
-    if not video_sent_results:
-        sys.exit('Error: no results returned from query: ' + video_sent_query)
-
-    video_acked_query = 'SELECT * FROM video_acked'
-    if time_clause is not None:
-        video_acked_query += ' WHERE ' + time_clause
-    video_acked_results = influx_client.query(video_acked_query)
-    if not video_acked_results:
-        sys.exit('Error: no results returned from query: ' + video_acked_query)
-
-    # create a client connected to Postgres
-    postgres_client = connect_to_postgres(yaml_settings)
-    postgres_cursor = postgres_client.cursor()
-
-    # calculate chunk transmission times
-    ret = calculate_trans_times(video_sent_results, video_acked_results,
-                                cc, postgres_cursor)
-
-    postgres_cursor.close()
-    return ret
-
-def read_csv_to_rows(data_file):
-    global DEBUG
-    merge_dt = pd.read_csv( data_file,  
-                            header=None, encoding="utf_8", engine='python' , 
-                            iterator = True, chunksize=FILE_CHUNK_SIZE ) 
-    rows = []
-    row_cnt = 0
-    for chunk in merge_dt:
-        for index, row in chunk.iterrows():              
-            rows.append(row)
-        row_cnt += chunk.shape[0]
-        print(data_file +' row_cnt=', row_cnt)
-        # for test
-        if DEBUG and row_cnt >= 10000:
-            break
-    return rows
-def row_to_dict(row, key_list):
-    pt = {}
-    for i in range(len(key_list)):
-        pt[key_list[i]] = row[i]
-    return pt     
-# to test whether this experiment_config uses cc 
-def is_cc(experiment_id, cc):
-    return True
-def process_raw_csv_data(video_sent_rows, video_acked_rows, cc):
-    # calculate chunk transmission times
-    d = {}
-    last_video_ts = {}
-    cnt = 0
-    for row in video_sent_rows:
-        pt = row_to_dict(row, VIDEO_SENT_KEYS)
-        session = str(pt["session_id"])+ "|"+str(pt['channel_name'])+"|"+ str(pt['experiment_id'])
-        # filter data points by congestion control
-        if cc is not None and is_cc(pt["experiment_id"], cc):
-            continue
-        if session not in d:
-            d[session] = {}
-            last_video_ts[session] = None
-        #print("chunk presentation time ",pt['chunk_presentation_timestamp'])
-        video_ts = int(pt['chunk_presentation_timestamp'])
-        if last_video_ts[session] is not None:
-            if video_ts != last_video_ts[session] + VIDEO_DURATION:
-                continue
-        last_video_ts[session] = video_ts
-        d[session][video_ts] = {}
-        dsv = d[session][video_ts]  # short name
-        dsv['sent_ts'] = np.datetime64(pt['timestamp'], 'ms')
-        dsv['size'] = float(pt['chunk_size']) / PKT_BYTES  # bytes -> packets
-        # byte/second -> packet/second
-        dsv['delivery_rate'] = float(pt['delivery_rate']) / PKT_BYTES
-        dsv['cwnd'] = float(pt['cwnd'])
-        dsv['in_flight'] = float(pt['in_flight'])
-        dsv['min_rtt'] = float(pt['min_rtt']) / MILLION  # us -> s
-        dsv['rtt'] = float(pt['rtt']) / MILLION  # us -> s
-        cnt += 1
-        if cnt % 500000==0:
-            print("video_sent_rows cnt=",cnt)
-    print("Middle... FIN ")
-    cnt = 0
-    for row in video_acked_rows:
-        pt = row_to_dict(row, VIDEO_ACKED_KEYS)
-        expt_id = pt['experiment_id']
-        session = str(pt["session_id"])+ "|"+str(pt['channel_name'])+"|"+ str(pt['experiment_id'])
-        # filter data points by congestion control
-        if cc is not None and is_cc(expt_id, cc):
-            continue
-        if session not in d:
-            continue
-        video_ts = int(pt['chunk_presentation_timestamp'])
-        if video_ts not in d[session]:
-            continue
-        dsv = d[session][video_ts]  # short name
-        # calculate transmission time
-        sent_ts = dsv['sent_ts']
-        acked_ts = np.datetime64(pt['timestamp'], 'ms')
-        dsv['acked_ts'] = acked_ts
-        dsv['trans_time'] = (acked_ts - sent_ts) / np.timedelta64(1, 's')
-        cnt += 1
-        if cnt % 500000==0:
-            print(" video_acked_rows cnt=",cnt)
-
-    return d
-
-def append_past_chunks(ds, next_ts, row):
-    i = 1
-    past_chunks = []
-
-    while i <= Model.PAST_CHUNKS:
-        ts = next_ts - i * VIDEO_DURATION
-        if ts in ds and 'trans_time' in ds[ts]:
-            past_chunks = [ds[ts]['delivery_rate'],
-                           ds[ts]['cwnd'], ds[ts]['in_flight'],
-                           ds[ts]['min_rtt'], ds[ts]['rtt'],
-                           ds[ts]['size'], ds[ts]['trans_time']] + past_chunks
-        else:
-            nts = ts + VIDEO_DURATION  # padding with the nearest ts
-            padding = [ds[nts]['delivery_rate'],
-                       ds[nts]['cwnd'], ds[nts]['in_flight'],
-                       ds[nts]['min_rtt'], ds[nts]['rtt']]
-
-            if nts == next_ts:
-                padding += [0, 0]  # next_ts is the first chunk to send
-            else:
-                padding += [ds[nts]['size'], ds[nts]['trans_time']]
-
-            break
-
-        i += 1
-
-    if i != Model.PAST_CHUNKS + 1:  # break in the middle; padding must exist
-        while i <= Model.PAST_CHUNKS:
-            past_chunks = padding + past_chunks
-            i += 1
-
-    row += past_chunks
-
-
-# return FUTURE_CHUNKS pairs of (raw_in, raw_out)
-def prepare_input_output(d):
-    ret = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
-
-    for session in d:
-        ds = d[session]
-
-        for next_ts in ds:
-            if 'trans_time' not in ds[next_ts]:
-                continue
-
-            # construct a single row of input data
-            row = []
-
-            # append past chunks with padding
-            append_past_chunks(ds, next_ts, row)
-
-            # append the TCP info of the next chunk
-            row += [ds[next_ts]['delivery_rate'],
-                    ds[next_ts]['cwnd'], ds[next_ts]['in_flight'],
-                    ds[next_ts]['min_rtt'], ds[next_ts]['rtt']]
-
-            # generate FUTURE_CHUNKS rows
-            for i in range(Model.FUTURE_CHUNKS):
-                row_i = row.copy()
-                ts = next_ts + i * VIDEO_DURATION
-                if ts in ds and 'trans_time' in ds[ts]:
-                    row_i += [ds[ts]['size']]
-                    assert(len(row_i) == Model.DIM_IN)
-                    ret[i]['in'].append(row_i)
-                    ret[i]['out'].append(ds[ts]['trans_time'])
-
-    return ret
-
-
-def cl_sample(args, time_start, time_end, max_size, ret):
-    raw_data = prepare_raw_data(args.yaml_settings,
-                                time_start, time_end, args.cc)
-    raw_in_out = prepare_input_output(raw_data)
-
-    ret_sample_size = None
-    for i in range(Model.FUTURE_CHUNKS):
-        real_size = len(raw_in_out[i]['in'])
-        assert(real_size == len(raw_in_out[i]['out']))
-        perm_indices = np.random.permutation(real_size)[:max_size]
-
-        if ret_sample_size is None or len(perm_indices) < ret_sample_size:
-            ret_sample_size = len(perm_indices)
-
-        for j in perm_indices:
-            ret[i]['in'].append(raw_in_out[i]['in'][j])
-            ret[i]['out'].append(raw_in_out[i]['out'][j])
-
-    return ret_sample_size
-
-
-def prepare_cl_data(args):
-    # calculate sampling weights and max data size to sample
-    total_weights = 0
-    for day in range(CL_MAX_DAYS):
-        total_weights += CL_DISCOUNT ** day
-
-    max_data_size = []
-    for day in range(CL_MAX_DAYS):
-        max_data_size.append(
-            int((CL_DISCOUNT ** day / total_weights) * CL_MAX_DATA_SIZE))
-
-    # training data set to return
-    ret = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
-
-    time_str = '%Y-%m-%dT%H:%M:%SZ'
-    td = datetime.utcnow()
-    today = datetime(td.year, td.month, td.day, td.hour, 0)
-
-    # sample data from the past week
-    for day in range(CL_MAX_DAYS):
-        end_ts = today - timedelta(days=day)
-        start_ts = today - timedelta(days=day+1)
-
-        end_ts_str = end_ts.strftime(time_str)
-        start_ts_str = start_ts.strftime(time_str)
-
-        # sample data between 'day+1' and 'day' days ago, and save into 'ret'
-        max_size = max_data_size[day]
-        sample_size = cl_sample(args, start_ts_str, end_ts_str, max_size, ret)
-
-        sys.stderr.write('Sampled {} data vs required {} data in day -{}\n'
-                         .format(sample_size, max_size, day + 1))
-
-    return ret
-
-
-def print_stats(i, output_data):
-    # print label distribution
-    bin_sizes = np.zeros(Model.BIN_MAX + 1, dtype=int)
-    for bin_id in output_data:
-        bin_sizes[bin_id] += 1
-    sys.stderr.write('[{}] label distribution:\n\t'.format(i))
-    for bin_size in bin_sizes:
-        sys.stderr.write(' {}'.format(bin_size))
-    sys.stderr.write('\n')
-
-    # predict a single label
-    sys.stderr.write('[{}] single label accuracy: {:.2f}%\n'
-                     .format(i, 100 * np.max(bin_sizes) / len(output_data)))
-
-
-def plot_loss(losses, figure_path):
-    fig, ax = plt.subplots()
-
-    if 'train' in losses:
-        ax.plot(losses['train'], 'g--', label='training')
-    if 'validate' in losses:
-        ax.plot(losses['validate'], 'r-', label='validation')
-
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    ax.grid()
-    ax.legend()
-
-    fig.savefig(figure_path, dpi=300, bbox_inches='tight', pad_inches=0.2)
-    sys.stderr.write('Saved plot to {}\n'.format(figure_path))
 
 
 def train(i, args, model, input_data, output_data):
@@ -840,6 +496,43 @@ def train_or_eval_model(i, args, raw_in_data, raw_out_data):
         # train a neural network with data
         train(i, args, model, input_data, output_data)
 
+
+def calc_sample_sizes(args, start_dt, end_dt, max_samples):
+    day_num = (end_dt - start_dt).days+1
+    sample_data_sizes = [None for i in range(day_num)]
+    line_nums = [0 for i in range(day_num)]
+    total_line_num = 0
+    for i in range(day_num):
+        date_item = start_dt + timedelta(days=i)
+        out_file_name = (args.output_path+"/"+str(date_item.year)+"-"
+                        +str(date_item.month).zfill(2)+"-"+str(date_item.day).zfill(2) +"-1.out")
+        f = open(out_file_name)
+        for index, line in enumerate(f):
+            line_nums[i] += 1
+        f.close()
+        total_line_num += line_nums[i]
+    for i in range(day_num):
+        sample_data_sizes[i] = int(max_samples*line_nums[i]/total_line_num )
+    return sample_data_sizes
+
+# compute mean square error of the classifier based on its expected value of distribution
+# (input_data and output_data have been normalized)
+def get_mse(proc_id, args, raw_in, raw_out):
+        # create or load a model
+    model = Model()
+    if args.load_model:
+        model_path = path.join(args.load_model, 'py-{}.pt'.format(proc_id))
+        model.load(model_path)
+        sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
+    else:
+        sys.stderr.write('No model path specified\n')
+    sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
+    input_data = model.normalize_input(raw_in, update_obs=False)
+    output_data = raw_out
+    result = model.compute_mse(proc_id, input_data, output_data)
+    print("proc_id=",proc_id," ", result)
+    return result
+
 def read_raw_data(proc_id, args, date_item, sample_size):
     raw_in_out = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
     for i in range(Model.FUTURE_CHUNKS):
@@ -873,80 +566,7 @@ def read_raw_data(proc_id, args, date_item, sample_size):
             
         del ret_in, ret_out
         gc.collect()
-    return raw_in_out
-
-# compute mean square error of the classifier based on its expected value of distribution
-# (input_data and output_data have been normalized)
-def get_mse(proc_id, args, raw_in, raw_out):
-        # create or load a model
-    model = Model()
-    if args.load_model:
-        model_path = path.join(args.load_model, 'py-{}.pt'.format(proc_id))
-        model.load(model_path)
-        sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
-    else:
-        sys.stderr.write('No model path specified\n')
-    sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
-    input_data = model.normalize_input(raw_in, update_obs=False)
-    output_data = raw_out
-    result = model.compute_mse(proc_id, input_data, output_data)
-    print("proc_id=",proc_id," ", result)
-    return result
-
-def read_csv_proc(proc_id, args, date_item, sample_size):
-    print("io_proc ", proc_id)
-    video_sent_file_name = args.file_path+'/'+ VIDEO_SENT_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-    video_acked_file_name = args.file_path+'/'+VIDEO_ACKED_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-    #client_buffer_file_name = CLIENT_BUFFER_FILE_PREFIX + date_item.strftime('%Y-%m-%d') + FILE_SUFFIX
-    video_sent_rows =  read_csv_to_rows(video_sent_file_name)
-    video_acked_rows = read_csv_to_rows(video_acked_file_name)
-    print("io_proc ", proc_id, " read rows FIN")
-    raw_data = process_raw_csv_data(video_sent_rows, video_acked_rows, None)
-    del video_sent_rows, video_acked_rows
-    gc.collect()
-    # collect input and output data from raw data
-    raw_in_out = prepare_input_output(raw_data)
-    del raw_data
-    gc.collect()
-    if sample_size is not None:
-        print("io_proc ", proc_id, " sampling...", sample_size)
-        ret = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
-        for i in range(Model.FUTURE_CHUNKS):
-            perm_indices = np.random.permutation(len(raw_in_out[i]['out']))[:sample_size]
-            for j in perm_indices:
-                ret[i]['in'].append(raw_in_out[i]['in'][j])
-                ret[i]['out'].append(raw_in_out[i]['out'][j])
-        print("io_proc ", proc_id, " sampling got...", sample_size)
-        del raw_in_out
-        gc.collect()
-        raw_in_out = ret
-    print("io_proc ", proc_id, " sampling FIN")
-    for raw_in_out_item in raw_in_out:
-        print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
-    #return raw_in_out, video_sent_rows, video_acked_rows
-    #return video_sent_rows, video_acked_rows
-
-    return raw_in_out
-
-def calc_sample_sizes(args, start_dt, end_dt, max_samples):
-    day_num = (end_dt - start_dt).days+1
-    sample_data_sizes = [None for i in range(day_num)]
-    line_nums = [0 for i in range(day_num)]
-    total_line_num = 0
-    for i in range(day_num):
-        date_item = start_dt + timedelta(days=i)
-        out_file_name = (args.output_path+"/"+str(date_item.year)+"-"
-                        +str(date_item.month).zfill(2)+"-"+str(date_item.day).zfill(2) +"-1.out")
-        f = open(out_file_name)
-        for index, line in enumerate(f):
-            line_nums[i] += 1
-        f.close()
-        total_line_num += line_nums[i]
-    for i in range(day_num):
-        sample_data_sizes[i] = int(max_samples*line_nums[i]/total_line_num )
-    return sample_data_sizes
-    
-        
+    return raw_in_out        
 
 def main():
     parser = argparse.ArgumentParser()
@@ -1025,18 +645,13 @@ def main():
         print("row len = ", len(raw_in_out))
         for raw_in_out_item in raw_in_out:
             print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
-    elif not args.cl:
-        # query InfluxDB and retrieve raw data
-        raw_data = prepare_raw_data(args.yaml_settings,
-                                    args.time_start, args.time_end, args.cc)
-        # collect input and output data from raw data
-        raw_in_out = prepare_input_output(raw_data)
     else:
         # continual learning
         raw_in_out = prepare_cl_data(args)
 
     # train or test FUTURE_CHUNKS models
     proc_list = []
+    # test
     if args.compute_mse:
         result = []
         pool = Pool(processes= Model.FUTURE_CHUNKS)
@@ -1046,6 +661,7 @@ def main():
             res_item = res.get()
         pool.close()
         pool.join()
+    # train
     else:
         for i in range(Model.FUTURE_CHUNKS):
             proc = Process(target=train_or_eval_model,
