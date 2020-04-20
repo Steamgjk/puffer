@@ -205,11 +205,13 @@ class Model:
         with torch.no_grad():
             x = torch.from_numpy(input_data).to(device=DEVICE)
             y = torch.from_numpy(output_data).to(device=DEVICE)
+            total += y.size(0)
             y = self.discretize_output(y)
+            print(type(y))
             y_scores = self.model(x)
             y_predicted = torch.max(y_scores, 1)[1].to(device=DEVICE)
 
-            total += y.size(0)
+            
             correct += (y_predicted == y).sum().item()
             print(y_predicted, " vs ", y)
 
