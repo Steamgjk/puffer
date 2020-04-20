@@ -417,7 +417,7 @@ def read_data(file_name):
             arr = eval(line)
             ret_in.append(arr)
             cnt += 1
-            if cnt % 1000 == 0:
+            if cnt % 10000 == 0:
                 print("cnt = ", cnt)
     f.close()
     out_file_name = file_name+".out"
