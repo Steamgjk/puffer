@@ -425,7 +425,7 @@ def read_data(file_name):
         for line in f:
             arr = eval(line)
             ret_out.extend(arr)
-    ret_out=ret_out[:len(ret_out)]
+    ret_out=ret_out[:len(ret_in)]
     f.close()
     return ret_in, ret_out    
 
