@@ -205,7 +205,7 @@ class Model:
         with torch.no_grad():
             x = torch.from_numpy(input_data).to(device=DEVICE)
             y = torch.from_numpy(output_data).to(device=DEVICE)
-            y = model.discretize_output(y)
+            y = self.discretize_output(y)
             y_scores = self.model(x)
             y_predicted = torch.max(y_scores, 1)[1].to(device=DEVICE)
 
