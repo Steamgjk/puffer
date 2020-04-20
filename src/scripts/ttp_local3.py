@@ -211,6 +211,7 @@ class Model:
 
             total += y.size(0)
             correct += (y_predicted == y).sum().item()
+            print(y_predicted, " vs ", y)
 
         return correct / total
 
