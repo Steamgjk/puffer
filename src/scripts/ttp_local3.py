@@ -206,8 +206,9 @@ class Model:
             x = torch.from_numpy(input_data).to(device=DEVICE)
             y = torch.from_numpy(output_data).to(device=DEVICE)
             total += y.size(0)
-            y = self.discretize_output(y)
-            print(type(y), y.shape())
+            y = self.discretize_output(y.numpy())
+            print("y len ", y.shape())
+            y = torch.from_numpy(y)
             y_scores = self.model(x)
             y_predicted = torch.max(y_scores, 1)[1].to(device=DEVICE)
 
