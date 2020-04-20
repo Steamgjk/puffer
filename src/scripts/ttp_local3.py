@@ -411,6 +411,7 @@ def read_data(file_name):
     ret_in = []
     ret_out = []
     in_file_name = file_name+".in"
+    cnt = 0
     with open(in_file_name) as f:
         for line in f:
             arr = eval(line)
@@ -424,7 +425,6 @@ def read_data(file_name):
         for line in f:
             arr = eval(line)
             ret_out.append(arr)
-            cnt += 1
     f.close()
     return ret_in, ret_out    
 
