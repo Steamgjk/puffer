@@ -404,7 +404,8 @@ def test_model(proc_id, args, raw_in_data, raw_out_data):
     print("out_data ", len(output_data))
     result = model.compute_mse(proc_id, input_data, output_data)
     print("result= ", result)
-    return result
+    result = model.compute_accuracy(proc_id, input_data, output_data)
+    print("result= ", result)
 
 
 def read_data(file_name):
