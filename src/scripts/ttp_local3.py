@@ -461,7 +461,7 @@ def main():
     else:
         #test
         ret_in, ret_out = read_data(args.test_data)
-        test_model(0, args, ret_in, ret_out):
+        test_model(0, args, ret_in, ret_out)
 
 
 
