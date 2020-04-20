@@ -296,7 +296,7 @@ def train(i, args, model, input_data, output_data):
     sys.stderr.write('[{}] total epochs: {}\n'.format(i, NUM_EPOCHS))
 
     # loop over the entire dataset multiple times
-    for epoch_id in range(1, 1 + NUM_EPOCHS):
+    for epoch_id in range(1, 1 + args.iter_num):
         # permutate data in each epoch
         perm_indices = np.random.permutation(num_training)
         running_loss = 0
