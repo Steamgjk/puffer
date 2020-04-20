@@ -185,7 +185,7 @@ class Model:
         l2_abl_out = distr_l2_pred(abl_distr)
 
         #print("LS VS ", l2_abl_out[:10], " VS ", output_data[:10])
-
+        print(len(input_data)," ", len(output_data) )
         bacc = bin_acc(bin_abl_out, output_data)
         loss1 = l1_loss(l1_abl_out, output_data)
         loss2 = l2_loss(l2_abl_out, output_data)
@@ -401,6 +401,7 @@ def test_model(proc_id, args, raw_in_data, raw_out_data):
         sys.stderr.write('No model path specified\n')
     input_data = model.normalize_input(raw_in_data, update_obs=False)
     output_data = raw_out_data
+    print("out_data ", len(output_data))
     result = model.compute_mse(proc_id, input_data, output_data)
     print("result= ", result)
     return result
