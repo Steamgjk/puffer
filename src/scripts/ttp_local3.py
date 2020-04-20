@@ -264,95 +264,6 @@ class Model:
         with open(meta_path, 'w') as fh:
             json.dump(meta, fh)
 
-
-def check_args(args):
-    if args.load_model:
-        if not path.isdir(args.load_model):
-            sys.exit('Error: directory {} does not exist'
-                     .format(args.load_model))
-
-        for i in range(Model.FUTURE_CHUNKS):
-            model_path = path.join(args.load_model, 'py-{}.pt'.format(i))
-            if not path.isfile(model_path):
-                sys.exit('Error: Python model {} does not exist'
-                         .format(model_path))
-
-    if args.save_model:
-        make_sure_path_exists(args.save_model)
-
-        for i in range(Model.FUTURE_CHUNKS):
-            model_path = path.join(args.save_model, 'py-{}.pt'.format(i))
-            if path.isfile(model_path):
-                sys.exit('Error: Python model {} already exists'
-                         .format(model_path))
-
-            model_path = path.join(args.save_model, 'cpp-{}.pt'.format(i))
-            if path.isfile(model_path):
-                sys.exit('Error: C++ model {} already exists'
-                         .format(model_path))
-
-            meta_path = path.join(args.save_model, 'cpp-meta-{}.pt'.format(i))
-            if path.isfile(meta_path):
-                sys.exit('Error: meta {} already exists'.format(meta_path))
-
-    if args.inference or args.compute_mse:
-        if not args.load_model:
-            sys.exit('Error: need to load model before inference')
-
-        if args.tune or args.save_model:
-            sys.exit('Error: cannot tune or save model during inference')
-    else:
-        if not args.save_model:
-            sys.exit('Error: specify a folder to save models\n')
-
-    # want to tune hyperparameters
-    if args.tune:
-        if args.save_model:
-            sys.stderr.write('Warning: model would better be trained with '
-                             'validation dataset\n')
-
-        global TUNING
-        TUNING = True
-
-    # set device to CPU or GPU
-    if args.enable_gpu:
-        if not torch.cuda.is_available():
-            sys.exit('Error: --enable-gpu is set but no CUDA is available')
-
-        global DEVICE
-        DEVICE = torch.device('cuda')
-        torch.backends.cudnn.benchmark = True
-
-    # continual learning
-    if args.cl:
-        if not args.load_model or not args.save_model:
-            sys.exit('Error: pass --load-model and --save-model to perform '
-                     'continual learning')
-
-        if args.time_start or args.time_end:
-            sys.exit('Error: --cl conflicts with --from and --to; it has its '
-                     'own strategy to sample data from specific durations')
-
-        if args.inference:
-            sys.exit('Error: cannot perform inference with --cl turned on')
-
-        # reduce number of epochs if training on a previous model
-        global NUM_EPOCHS
-        NUM_EPOCHS = 300
-    if args.use_debug:
-        global DEBUG
-        DEBUG = True
-    
-    if args.max_samples:
-        global CL_MAX_DATA_SIZE
-        CL_MAX_DATA_SIZE = args.max_samples
-    if args.discount:
-        global CL_DISCOUNT
-        CL_DISCOUNT = args.discount
-
-
-
-
 def train(i, args, model, input_data, output_data):
     print("train ", i, input_data.shape, output_data.shape)
     if TUNING:
@@ -388,7 +299,6 @@ def train(i, args, model, input_data, output_data):
     for epoch_id in range(1, 1 + NUM_EPOCHS):
         # permutate data in each epoch
         perm_indices = np.random.permutation(num_training)
-
         running_loss = 0
         for batch_id in range(num_batches):
             start = batch_id * BATCH_SIZE
@@ -464,214 +374,95 @@ def train_or_eval_model(i, args, raw_in_data, raw_out_data):
 
     # create or load a model
     model = Model()
-    if args.load_model:
-        model_path = path.join(args.load_model, 'py-{}.pt'.format(i))
-        model.load(model_path)
-        sys.stderr.write('[{}] Loaded model from {}\n'.format(i, model_path))
-    else:
-        sys.stderr.write('[{}] Created a new model\n'.format(i))
+    if args.static_training is False:
+        #model_path = path.join(args.load_model, 'py-{}.pt'.format(i))
+        model.load(args.load_model)
 
-    # normalize input data
-    if args.inference:
-        input_data = model.normalize_input(raw_in_data, update_obs=False)
-    else:
-        input_data = model.normalize_input(raw_in_data, update_obs=True)
-
+    input_data = model.normalize_input(raw_in_data, update_obs=True)
     # discretize output data
     output_data = model.discretize_output(raw_out_data)
-
-    # print some stats
-    print_stats(i, output_data) 
-
     if args.inference:
         model.set_model_eval()
-
         sys.stderr.write('[{}] test set size: {}\n'.format(i, len(input_data)))
-        sys.stderr.write('[{}] loss: {:.3f}, accuracy: {:.2f}%\n'
-            .format(i, model.compute_loss(input_data, output_data),
-                    100 * model.compute_accuracy(input_data, output_data)))
     else:  # training
         model.set_model_train()
-
         # train a neural network with data
         train(i, args, model, input_data, output_data)
 
-
-def calc_sample_sizes(args, start_dt, end_dt, max_samples):
-    day_num = (end_dt - start_dt).days+1
-    sample_data_sizes = [None for i in range(day_num)]
-    line_nums = [0 for i in range(day_num)]
-    total_line_num = 0
-    for i in range(day_num):
-        date_item = start_dt + timedelta(days=i)
-        out_file_name = (args.output_path+"/"+str(date_item.year)+"-"
-                        +str(date_item.month).zfill(2)+"-"+str(date_item.day).zfill(2) +"-1.out")
-        f = open(out_file_name)
-        for index, line in enumerate(f):
-            line_nums[i] += 1
-        f.close()
-        total_line_num += line_nums[i]
-    for i in range(day_num):
-        sample_data_sizes[i] = int(max_samples*line_nums[i]/total_line_num )
-    return sample_data_sizes
-
-# compute mean square error of the classifier based on its expected value of distribution
-# (input_data and output_data have been normalized)
-def get_mse(proc_id, args, raw_in, raw_out):
-        # create or load a model
+def test_model(i, args, raw_in_data, raw_out_data):
+    # normalize input data
     model = Model()
+    model.set_model_eval()
     if args.load_model:
-        model_path = path.join(args.load_model, 'py-{}.pt'.format(proc_id))
+        model_path = args.load_model
         model.load(model_path)
         sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
     else:
         sys.stderr.write('No model path specified\n')
     sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
-    input_data = model.normalize_input(raw_in, update_obs=False)
-    output_data = raw_out
+    input_data = model.normalize_input(raw_in_data, update_obs=False)
+    output_data = raw_out_data
     result = model.compute_mse(proc_id, input_data, output_data)
-    print("proc_id=",proc_id," ", result)
+    print("result= ", result)
     return result
 
-def read_raw_data(proc_id, args, date_item, sample_size):
-    raw_in_out = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
-    for i in range(Model.FUTURE_CHUNKS):
-        ret_in = []
-        ret_out = []
-        in_file_name = args.output_path + '/'+date_item.strftime('%Y-%m-%d')+"-"+str(i) +".in"
-        cnt = 0
-        print("in_file_name=",in_file_name, " sample_size=", sample_size)
-        with open(in_file_name) as f:
-            for line in f:
-                arr = eval(line)
-                ret_in.append(arr)
-                cnt += 1
-                if cnt%100000 == 0:
-                    print('proc_id=', proc_id," ", cnt)
-        f.close()
-        out_file_name = args.output_path + '/'+date_item.strftime('%Y-%m-%d')+"-"+str(i) +".out"
-        with open(out_file_name) as f:
-            for line in f:
-                arr = eval(line)
-                ret_out.extend(arr)
-        f.close()
-        if sample_size is not None:
-            perm_indices = np.random.permutation(len(ret_in))[:sample_size]
-            for j in perm_indices:
-                raw_in_out[i]['in'].append(ret_in[j])
-                raw_in_out[i]['out'].append(ret_out[j])
-        else:
-            raw_in_out[i]['in'] = ret_in
-            raw_in_out[i]['out'] = ret_out
-            
-        del ret_in, ret_out
-        gc.collect()
-    return raw_in_out        
+
+def read_data(file_name):
+    ret_in = []
+    ret_out = []
+    in_file_name = file_name+".in"
+    with open(in_file_name) as f:
+        for line in f:
+            arr = eval(line)
+            ret_in.append(arr)
+            cnt += 1
+            if cnt % 1000 == 0:
+                print("cnt = ", cnt)
+    f.close()
+    out_file_name = file_name+".out"
+    with open(out_file_name) as f:
+        for line in f:
+            arr = eval(line)
+            ret_out.append(arr)
+            cnt += 1
+    f.close()
+    return ret_in, ret_out    
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--use-csv', dest='use_csv', action='store_true', 
-                        help='use csv files and the data source')
-    parser.add_argument('--use-sample', dest='use_sample', action='store_true', 
-                        help='use sampling method with the data source')
+    parser.add_argument('--is-training', dest='is_training', action='store_true', 
+                        help='is training or testing')
+    parser.add_argument('--static-training', dest='static_training', action='store_true', 
+                        help='static training (or continual learning)')
     parser.add_argument('--compute-mse', dest='compute_mse', action='store_true', 
                         help='whether compute the mean square error')
     parser.add_argument('--use-debug', dest='use_debug', action='store_true', 
                         help='in debug mode')      
-    parser.add_argument('--max-samples', dest='max_samples', type=int,
-                        help='max number of sample data (default 1 million)')   
-    parser.add_argument('--discount', dest='discount', type=float,
-                        help='discount of sampling (default 0.9)')                     
-    parser.add_argument('--file-path', dest='file_path',
-                        help='path of training data')  
-    parser.add_argument('--output-path', dest='output_path',
-                        help='output path of pre-processsed data')                      
-    parser.add_argument('--start-date', dest='start_date',
-                        help='start date of the training data')  
-    parser.add_argument('--end-date', dest='end_date',
-                        help='end date of the training data')    
 
-    parser.add_argument('--from', dest='time_start',
-                        help='datetime in UTC conforming to RFC3339')
-    parser.add_argument('--to', dest='time_end',
-                        help='datetime in UTC conforming to RFC3339')
-    parser.add_argument('--cc', help='filter input data by congestion control')
-    parser.add_argument('--load-model',
-        help='folder to load {:d} models from'.format(Model.FUTURE_CHUNKS))
+    parser.add_argument('--training-data', dest='training_data',
+                        help='file path of the training data')      
+    parser.add_argument('--iteration-number', dest='iter_num',
+                        help='number of training iterations')                 
+    parser.add_argument('--test-data', dest='test_data',
+                        help='file path of test-data')    
+
+    parser.add_argument('--load-model', dest='load_model',
+        help='the model to load')
     parser.add_argument('--save-model',
         help='folder to save {:d} models to'.format(Model.FUTURE_CHUNKS))
-    parser.add_argument('--enable-gpu', action='store_true')
-    parser.add_argument('--tune', action='store_true')
-    parser.add_argument('--inference', action='store_true')
-    parser.add_argument('--cl', action='store_true', help='continual learning')
-
+    
     args = parser.parse_args()
-    print('file_path {0}'.format(args.file_path))
-    print('start date {0}'.format(args.start_date)) 
-    print('end date {0}'.format(args.end_date)) 
 
-    start_dt = datetime.strptime(args.start_date,"%Y%m%d")
-    end_dt = datetime.strptime(args.end_date,"%Y%m%d")
-    # validate and process args
-    check_args(args)
-    if args.use_csv:
-        day_num = (end_dt - start_dt).days+1
-        raw_in_out = [{'in':[], 'out':[]} for _ in range(Model.FUTURE_CHUNKS)]
-        sample_data_sizes = [None for i in range(day_num)]
-        if day_num > 1:
-            pool = Pool(processes= 7)
-            result = []    
-            if args.use_sample:
-                sample_data_sizes = calc_sample_sizes(args, start_dt, end_dt, args.max_samples)
-            print("sample_data_sizes ", sample_data_sizes)
-            for i in range(day_num):
-                date_item = start_dt + timedelta(days=i)
-                result.append(pool.apply_async(read_raw_data, args=(i, args, date_item, sample_data_sizes[i]) ))
-            print("FIN Proce")
-            for res in result:
-                res_item = res.get()
-                for i in range(Model.FUTURE_CHUNKS):
-                    print("i=",i," ", len(res_item[i]['in']), " ", len(res_item[i]['out']) )
-                    raw_in_out[i]['in'].extend(res_item[i]['in'])
-                    raw_in_out[i]['out'].extend(res_item[i]['out'])
-            pool.close()
-            pool.join()
-            print("join fin")
-        else:
-            res = read_raw_data(0, args, start_dt, None)
-            for i in range(Model.FUTURE_CHUNKS):
-                raw_in_out[i]['in'].extend(res[i]['in'])
-                raw_in_out[i]['out'].extend(res[i]['out'])
-        print("row len = ", len(raw_in_out))
-        for raw_in_out_item in raw_in_out:
-            print('in_len = ', len(raw_in_out_item['in']), ' out_len=', len(raw_in_out_item['out']))
+    if args.is_training:
+        #train
+        ret_in, ret_out = read_data(args.training_data)
+        train_or_eval_model(0, args, ret_in, ret_out)
     else:
-        # continual learning
-        raw_in_out = prepare_cl_data(args)
+        #test
+        ret_in, ret_out = read_data(args.test_data)
+        test_model(0, args, ret_in, ret_out):
 
-    # train or test FUTURE_CHUNKS models
-    proc_list = []
-    # test
-    if args.compute_mse:
-        result = []
-        pool = Pool(processes= Model.FUTURE_CHUNKS)
-        for i in range(Model.FUTURE_CHUNKS):
-            result.append(pool.apply_async(get_mse, args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],) ))
-        for res in result:
-            res_item = res.get()
-        pool.close()
-        pool.join()
-    # train
-    else:
-        for i in range(Model.FUTURE_CHUNKS):
-            proc = Process(target=train_or_eval_model,
-                        args=(i, args, raw_in_out[i]['in'], raw_in_out[i]['out'],))
-            proc_list.append(proc)
-        for proc in proc_list:
-            proc.start()
-        # wait for all processes to finish
-        for proc in proc_list:
-            proc.join()
 
 
 if __name__ == '__main__':
