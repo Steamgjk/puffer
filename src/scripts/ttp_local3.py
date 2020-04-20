@@ -399,7 +399,6 @@ def test_model(proc_id, args, raw_in_data, raw_out_data):
         sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
     else:
         sys.stderr.write('No model path specified\n')
-    sys.stderr.write('[{}] Loaded model from {}\n'.format(proc_id, model_path))
     input_data = model.normalize_input(raw_in_data, update_obs=False)
     output_data = raw_out_data
     result = model.compute_mse(proc_id, input_data, output_data)
