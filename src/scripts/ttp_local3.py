@@ -389,7 +389,7 @@ def train_or_eval_model(i, args, raw_in_data, raw_out_data):
         # train a neural network with data
         train(i, args, model, input_data, output_data)
 
-def test_model(i, args, raw_in_data, raw_out_data):
+def test_model(proc_id, args, raw_in_data, raw_out_data):
     # normalize input data
     model = Model()
     model.set_model_eval()
